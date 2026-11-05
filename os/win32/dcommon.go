@@ -1,13 +1,27 @@
 package w32
 
-import "unsafe"
+import (
+	"unsafe"
+)
 
 type D2D1_SIZE_U = D2D_SIZE_U
-
 type D2D_SIZE_U Size[UINT32]
 
 func (su D2D_SIZE_U) ToUintptr() (out uintptr) {
 	return *(*uintptr)(unsafe.Pointer(&su))
+}
+func UintptrTo_D2D_SIZE_U(in uintptr) (out D2D_SIZE_U) {
+	return *(*D2D_SIZE_U)(unsafe.Pointer(&in))
+}
+
+type D2D1_SIZE_F = D2D_SIZE_F
+type D2D_SIZE_F Size[FLOAT]
+
+func (sf D2D_SIZE_F) ToUintptr() (out uintptr) {
+	return *(*uintptr)(unsafe.Pointer(&sf))
+}
+func UintptrTo_D2D_SIZE_F(in uintptr) (out D2D_SIZE_F) {
+	return *(*D2D_SIZE_F)(unsafe.Pointer(&in))
 }
 
 type D2D1_PIXEL_FORMAT struct {
@@ -15,6 +29,7 @@ type D2D1_PIXEL_FORMAT struct {
 	AlphaMode D2D1_ALPHA_MODE
 }
 
+type D2D1_RECT_U = D2D_RECT_U
 type D2D_RECT_U struct {
 	Left   UINT32
 	Top    UINT32
@@ -22,8 +37,15 @@ type D2D_RECT_U struct {
 	Bottom UINT32
 }
 
-type D2D1_MATRIX_3X2_F = D2D_MATRIX_3X2_F
+type D2D1_RECT_F = D2D_RECT_F
+type D2D_RECT_F struct {
+	Left   FLOAT
+	Top    FLOAT
+	Right  FLOAT
+	Bottom FLOAT
+}
 
+type D2D1_MATRIX_3X2_F = D2D_MATRIX_3X2_F
 type D2D_MATRIX_3X2_F struct {
 	// Horizontal scaling / cosine of rotation
 	M11 FLOAT

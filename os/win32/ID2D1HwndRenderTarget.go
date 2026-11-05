@@ -85,13 +85,16 @@ func (wrt *ID2D1HwndRenderTarget) Release() ULONG {
 	r0, _, _ := syscall.SyscallN(wrt.Vtbl.Release, uintptr(unsafe.Pointer(wrt)))
 	return ULONG(r0)
 }
-func (wrt *ID2D1HwndRenderTarget) CreateBitmap(size D2D1_SIZE_U, srcData unsafe.Pointer, pitch UINT32, bitmapProperties *D2D1_BITMAP_PROPERTIES, bitmap **ID2D1Bitmap) (hr HRESULT, err error) {
-	r0, _, _ := syscall.SyscallN(wrt.Vtbl.CreateBitmap, uintptr(unsafe.Pointer(wrt)), size.ToUintptr(), uintptr(srcData), uintptr(pitch), uintptr(unsafe.Pointer(bitmapProperties)), uintptr(unsafe.Pointer(bitmap)))
+func (wrt *ID2D1HwndRenderTarget) CreateBitmap(size D2D1_SIZE_U, srcData []byte, pitch UINT32, bitmapProperties *D2D1_BITMAP_PROPERTIES, bitmap **ID2D1Bitmap) (hr HRESULT, err error) {
+	r0, _, _ := syscall.SyscallN(wrt.Vtbl.CreateBitmap, uintptr(unsafe.Pointer(wrt)), size.ToUintptr(), uintptr(unsafe.Pointer(&srcData[0])), uintptr(pitch), uintptr(unsafe.Pointer(bitmapProperties)), uintptr(unsafe.Pointer(bitmap)))
 	hr = HRESULT(r0)
 	if hr != S_OK {
 		err = syscall.Errno(hr)
 	}
 	return
+}
+func (wrt *ID2D1HwndRenderTarget) DrawBitmap(bitmap *ID2D1Bitmap, destinationRectangle *D2D1_RECT_F, opacity FLOAT, interpolationMode D2D1_BITMAP_INTERPOLATION_MODE, sourceRectangle *D2D1_RECT_F) {
+	_, _, _ = syscall.SyscallN(wrt.Vtbl.DrawBitmap, uintptr(unsafe.Pointer(wrt)), uintptr(unsafe.Pointer(bitmap)), uintptr(unsafe.Pointer(destinationRectangle)), uintptr(opacity), uintptr(interpolationMode), uintptr(unsafe.Pointer(sourceRectangle)))
 }
 func (wrt *ID2D1HwndRenderTarget) SetTransform(transform *D2D1_MATRIX_3X2_F) {
 	_, _, _ = syscall.SyscallN(wrt.Vtbl.SetTransform, uintptr(unsafe.Pointer(wrt)), uintptr(unsafe.Pointer(transform)))

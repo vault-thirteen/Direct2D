@@ -38,7 +38,6 @@ func (f *ID2D1Factory) Release() ULONG {
 	r0, _, _ := syscall.SyscallN(f.Vtbl.Release, uintptr(unsafe.Pointer(f)))
 	return ULONG(r0)
 }
-
 func (f *ID2D1Factory) CreateHwndRenderTarget(renderTargetProperties *D2D1_RENDER_TARGET_PROPERTIES, hwndRenderTargetProperties *D2D1_HWND_RENDER_TARGET_PROPERTIES, hwndRenderTarget **ID2D1HwndRenderTarget) (hr HRESULT, err error) {
 	r0, _, _ := syscall.SyscallN(f.Vtbl.CreateHwndRenderTarget, uintptr(unsafe.Pointer(f)), uintptr(unsafe.Pointer(renderTargetProperties)), uintptr(unsafe.Pointer(hwndRenderTargetProperties)), uintptr(unsafe.Pointer(hwndRenderTarget)))
 	hr = HRESULT(r0)

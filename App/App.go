@@ -520,7 +520,9 @@ func (app *App) onRender() (err error) {
 	app.renderTarget.Clear(&color)
 
 	if app.bitmap != nil {
-		//TODO
+		var size w32.D2D1_SIZE_F = app.bitmap.GetSize()
+		var destinationRect = w32.D2D1_RectF(0.0, 0.0, size.Width, size.Height)
+		app.renderTarget.DrawBitmap(app.bitmap, &destinationRect, w32.FLOAT(1.0), w32.D2D1_BITMAP_INTERPOLATION_MODE_LINEAR, nil)
 	}
 
 	hr, err = app.renderTarget.EndDraw()
@@ -603,7 +605,6 @@ func (app *App) loadBitmap() (err error) {
 		Width:  w32.UINT32(image.Size.Width),
 		Height: w32.UINT32(image.Size.Height),
 	}
-	var srcData = unsafe.Pointer(&image.PixelData()[0])
 	var pitch = w32.UINT32(image.LineStride())
 	var bitmapProperties = w32.D2D1_BITMAP_PROPERTIES{
 		PixelFormat: w32.D2D1_PIXEL_FORMAT{
@@ -614,10 +615,16 @@ func (app *App) loadBitmap() (err error) {
 		DpiY: w32.DefaultDpiY,
 	}
 
-	_, err = app.renderTarget.CreateBitmap(size, srcData, pitch, &bitmapProperties, &app.bitmap)
+	_, err = app.renderTarget.CreateBitmap(size, image.PixelData(), pitch, &bitmapProperties, &app.bitmap)
 	if err != nil {
 		return err
 	}
+
+	//TODO
+	sizeInDip := app.bitmap.GetSize()
+	app.printMessage(cio.FormatMessage("Bitmap size in DIP: %+v", sizeInDip))
+	sizeInPx := app.bitmap.GetPixelSize()
+	app.printMessage(cio.FormatMessage("Bitmap size in pixels: %+v", sizeInPx))
 
 	return nil
 }
