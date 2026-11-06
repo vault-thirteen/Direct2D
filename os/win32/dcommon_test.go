@@ -67,3 +67,10 @@ func Test_UintptrTo_D2D_SIZE_F(t *testing.T) {
 	aTest.MustBeEqual(width, FLOAT(123.01))
 	aTest.MustBeEqual(height, FLOAT(456.02))
 }
+
+func Test_D2D1_SIZE_U(t *testing.T) {
+	aTest := tester.New(t)
+
+	x := D2D1_SIZE_U{Width: 1000000001, Height: 2000000002}
+	aTest.MustBeEqual(int(unsafe.Sizeof(x)), 8)
+}

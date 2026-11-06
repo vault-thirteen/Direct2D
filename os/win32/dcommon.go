@@ -1,27 +1,44 @@
 package w32
 
 import (
-	"unsafe"
+	"math"
 )
 
 type D2D1_SIZE_U = D2D_SIZE_U
 type D2D_SIZE_U Size[UINT32]
 
 func (su D2D_SIZE_U) ToUintptr() (out uintptr) {
-	return *(*uintptr)(unsafe.Pointer(&su))
+	x := (uint64(su.Height) << 32) | uint64(su.Width)
+	return uintptr(x)
+	//return *(*uintptr)(unsafe.Pointer(&su))
 }
 func UintptrTo_D2D_SIZE_U(in uintptr) (out D2D_SIZE_U) {
-	return *(*D2D_SIZE_U)(unsafe.Pointer(&in))
+	return D2D1_SIZE_U{
+		Width:  uint32(in & 0xFFFFFFFF),
+		Height: uint32(in >> 32),
+	}
+	//return *(*D2D_SIZE_U)(unsafe.Pointer(&in))
 }
 
 type D2D1_SIZE_F = D2D_SIZE_F
 type D2D_SIZE_F Size[FLOAT]
 
 func (sf D2D_SIZE_F) ToUintptr() (out uintptr) {
-	return *(*uintptr)(unsafe.Pointer(&sf))
+	wBits := uint64(math.Float32bits(sf.Width))
+	hBits := uint64(math.Float32bits(sf.Height))
+	x := ((hBits) << 32) | wBits
+	return uintptr(x)
+	//return *(*uintptr)(unsafe.Pointer(&sf))
 }
 func UintptrTo_D2D_SIZE_F(in uintptr) (out D2D_SIZE_F) {
-	return *(*D2D_SIZE_F)(unsafe.Pointer(&in))
+	x := uint64(in)
+	wBits := uint32(x & 0xFFFFFFFF)
+	hBits := uint32(x >> 32)
+	return D2D1_SIZE_F{
+		Width:  math.Float32frombits(wBits),
+		Height: math.Float32frombits(hBits),
+	}
+	//return *(*D2D_SIZE_F)(unsafe.Pointer(&in))
 }
 
 type D2D1_PIXEL_FORMAT struct {
