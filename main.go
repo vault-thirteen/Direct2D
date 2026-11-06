@@ -6,6 +6,7 @@ import (
 	a "github.com/vault-thirteen/Direct2D/App"
 	as "github.com/vault-thirteen/Direct2D/AppSettings"
 	c "github.com/vault-thirteen/Direct2D/common"
+	w32 "github.com/vault-thirteen/Direct2D/os/win32"
 	"golang.org/x/sys/windows"
 )
 
@@ -31,6 +32,16 @@ func main() {
 		PrintJobsChannelSize: 16,
 		ImagesToLoad: []string{
 			`img\Row_of_Town_Houses.jpg`,
+		},
+		UseHardwareRendering:                     false,
+		UseStraightAlphaChannelForImportedImages: false,
+		RenderTargetFormat: as.AppRenderTargetFormatSettings{
+			PixelFormat: w32.DXGI_FORMAT_B8G8R8A8_UNORM,
+			AlphaMode:   w32.D2D1_ALPHA_MODE_PREMULTIPLIED,
+		},
+		BitmapFormat: as.AppBitmapFormatSettings{
+			PixelFormat: w32.DXGI_FORMAT_B8G8R8A8_UNORM,
+			AlphaMode:   w32.D2D1_ALPHA_MODE_PREMULTIPLIED,
 		},
 	}
 

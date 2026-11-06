@@ -58,7 +58,7 @@ func NewApp(settings *as.AppSettings, instance windows.Handle) (app *App, err er
 	// Images.
 	var image *img.Image
 	for _, filePath := range settings.ImagesToLoad {
-		image, err = img.NewImageFromFile(filePath)
+		image, err = img.NewImageFromFile(filePath, app.settings.UseStraightAlphaChannelForImportedImages)
 		if err != nil {
 			return nil, err
 		}
@@ -569,13 +569,22 @@ func (app *App) createRenderTarget() (err error) {
 	var size = w32.D2D1_SizeU(uint32(rect.Right-rect.Left), uint32(rect.Bottom-rect.Top))
 
 	var renderTargetProperties = w32.RenderTargetProperties()
+
+	if app.settings.UseHardwareRendering {
+		renderTargetProperties.Type = w32.D2D1_RENDER_TARGET_TYPE_HARDWARE
+	} else {
+		renderTargetProperties.Type = w32.D2D1_RENDER_TARGET_TYPE_SOFTWARE
+	}
+
 	renderTargetProperties.PixelFormat = w32.D2D1_PIXEL_FORMAT{
-		Format:    w32.DXGI_FORMAT_R8G8B8A8_UNORM,
-		AlphaMode: w32.D2D1_ALPHA_MODE_PREMULTIPLIED,
+		Format:    app.settings.RenderTargetFormat.PixelFormat,
+		AlphaMode: app.settings.RenderTargetFormat.AlphaMode,
 	}
 
 	var hwndRenderTargetProperties = w32.HwndRenderTargetProperties(app.hwnd, size, w32.D2D1_PRESENT_OPTIONS_NONE)
 
+	// List of formats supported by ID2D1HwndRenderTarget in Direct2D:
+	// https://learn.microsoft.com/en-us/windows/win32/direct2d/supported-pixel-formats-and-alpha-modes#supported-formats-for-id2d1hwndrendertarget
 	_, err = app.direct2DFactory.CreateHwndRenderTarget(&renderTargetProperties, &hwndRenderTargetProperties, &app.renderTarget)
 	if err != nil {
 		return err
@@ -601,21 +610,56 @@ func (app *App) loadBitmap() (err error) {
 	}
 
 	var image = app.images[0]
+
+	// Check formats.
+	if image.AlphaChannelMode != app.settings.BitmapFormat.AlphaMode {
+		return errors.ErrorFromFormattedText(c.Errf_BitmapAlphaModeMismatch, app.settings.BitmapFormat.AlphaMode, image.AlphaChannelMode)
+	}
+
+	// Of all the colour models which are supported in Go language, only RGBA
+	// model has chances to be used. Unfortunately, Google corporation does not
+	// support alternative technologies and standards.
+	if image.ColourModelType != img.ColourModelType_RGBA {
+		return errors.ErrorFromText(c.Err_UnsupportedPixelFormat)
+	}
+
+	// Of all the colour models which are supported by Direct2D API, only BGRA
+	// model has chances to be used. Unfortunately, Microsoft corporation does
+	// not support alternative technologies and standards.
+	var expectedPixelFormat = app.settings.BitmapFormat.PixelFormat
+	if expectedPixelFormat != w32.DXGI_FORMAT_B8G8R8A8_UNORM {
+		return errors.ErrorFromText(c.Err_UnsupportedPixelFormat)
+	}
+
+	// Convert image from RGBA into BGRA model.
+	var pixelData []byte
+	pixelData, err = image.PixelDataAsBGRA()
+	if err != nil {
+		return err
+	}
+
 	var size = w32.D2D1_SIZE_U{
 		Width:  w32.UINT32(image.Size.Width),
 		Height: w32.UINT32(image.Size.Height),
 	}
-	var pitch = w32.UINT32(image.LineStride())
+
+	// While we do not support YCbCr format, we process only RGBA images.
+	var lineStride int
+	lineStride, _, _ = image.LineStride()
+	var pitch = w32.UINT32(lineStride)
+
 	var bitmapProperties = w32.D2D1_BITMAP_PROPERTIES{
 		PixelFormat: w32.D2D1_PIXEL_FORMAT{
-			Format:    w32.DXGI_FORMAT_R8G8B8A8_UNORM,
-			AlphaMode: w32.D2D1_ALPHA_MODE_PREMULTIPLIED,
+			Format:    expectedPixelFormat,
+			AlphaMode: image.AlphaChannelMode,
 		},
 		DpiX: w32.DefaultDpiX,
 		DpiY: w32.DefaultDpiY,
 	}
 
-	_, err = app.renderTarget.CreateBitmap(size, image.PixelData(), pitch, &bitmapProperties, &app.bitmap)
+	// List of formats supported by ID2D1Bitmap in Direct2D:
+	// https: //learn.microsoft.com/en-us/windows/win32/direct2d/supported-pixel-formats-and-alpha-modes#specifying-a-pixel-format-for-an-id2d1bitmap
+	_, err = app.renderTarget.CreateBitmap(size, pixelData, pitch, &bitmapProperties, &app.bitmap)
 	if err != nil {
 		return err
 	}
