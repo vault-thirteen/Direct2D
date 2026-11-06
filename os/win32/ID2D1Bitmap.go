@@ -44,7 +44,7 @@ func (b *ID2D1Bitmap) GetPixelSize() (su D2D1_SIZE_U) {
 	return UintptrTo_D2D_SIZE_U(r0)
 }
 func (b *ID2D1Bitmap) CopyFromMemory(dstRect *D2D1_RECT_U, srcData []byte, pitch UINT32) (hr HRESULT, err error) {
-	r0, _, _ := syscall.SyscallN(b.Vtbl.CopyFromMemory, uintptr(unsafe.Pointer(b)), uintptr(unsafe.Pointer(dstRect)), uintptr(unsafe.Pointer(&srcData[0])), uintptr(pitch))
+	r0, _, _ := syscall.SyscallN(b.Vtbl.CopyFromMemory, uintptr(unsafe.Pointer(b)), uintptr(unsafe.Pointer(dstRect)), uintptr(unsafe.Pointer(unsafe.SliceData(srcData))), uintptr(pitch))
 	hr = HRESULT(r0)
 	if hr != S_OK {
 		err = syscall.Errno(hr)
