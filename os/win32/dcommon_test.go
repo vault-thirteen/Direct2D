@@ -12,7 +12,7 @@ func Test_D2D_SIZE_U_ToUintptr(t *testing.T) {
 	aTest := tester.New(t)
 
 	var su = D2D_SIZE_U{Width: 123, Height: 456}
-	var x uintptr = su.ToUintptr()
+	var x = uintptr(su.ToUint64())
 	var unpackedSU D2D_SIZE_U = *(*D2D_SIZE_U)(unsafe.Pointer(&x))
 	aTest.MustBeEqual(su, unpackedSU)
 
@@ -27,7 +27,7 @@ func Test_UintptrTo_D2D_SIZE_U(t *testing.T) {
 	aTest := tester.New(t)
 
 	var su = D2D_SIZE_U{Width: 123, Height: 456}
-	var x uintptr = su.ToUintptr()
+	var x = uintptr(su.ToUint64())
 	aTest.MustBeEqual(UintptrTo_D2D_SIZE_U(x), su)
 
 	widthBits := uint32(x & 0xFFFFFFFF)
@@ -42,7 +42,7 @@ func Test_D2D_SIZE_F_ToUintptr(t *testing.T) {
 	aTest := tester.New(t)
 
 	var sf = D2D_SIZE_F{Width: 123.01, Height: 456.02}
-	var x uintptr = sf.ToUintptr()
+	var x = uintptr(sf.ToUint64())
 	var unpackedSF D2D_SIZE_F = *(*D2D_SIZE_F)(unsafe.Pointer(&x))
 	aTest.MustBeEqual(sf, unpackedSF)
 
@@ -57,7 +57,7 @@ func Test_UintptrTo_D2D_SIZE_F(t *testing.T) {
 	aTest := tester.New(t)
 
 	var sf = D2D_SIZE_F{Width: 123.01, Height: 456.02}
-	var x uintptr = sf.ToUintptr()
+	var x = uintptr(sf.ToUint64())
 	aTest.MustBeEqual(UintptrTo_D2D_SIZE_F(x), sf)
 
 	widthBits := uint32(x & 0xFFFFFFFF)

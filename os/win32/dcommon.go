@@ -7,9 +7,8 @@ import (
 type D2D1_SIZE_U = D2D_SIZE_U
 type D2D_SIZE_U Size[UINT32]
 
-func (su D2D_SIZE_U) ToUintptr() (out uintptr) {
-	x := (uint64(su.Height) << 32) | uint64(su.Width)
-	return uintptr(x)
+func (su D2D_SIZE_U) ToUint64() (out uint64) {
+	return (uint64(su.Height) << 32) | uint64(su.Width)
 	//return *(*uintptr)(unsafe.Pointer(&su))
 }
 func UintptrTo_D2D_SIZE_U(in uintptr) (out D2D_SIZE_U) {
@@ -23,11 +22,10 @@ func UintptrTo_D2D_SIZE_U(in uintptr) (out D2D_SIZE_U) {
 type D2D1_SIZE_F = D2D_SIZE_F
 type D2D_SIZE_F Size[FLOAT]
 
-func (sf D2D_SIZE_F) ToUintptr() (out uintptr) {
+func (sf D2D_SIZE_F) ToUint64() (out uint64) {
 	wBits := uint64(math.Float32bits(sf.Width))
 	hBits := uint64(math.Float32bits(sf.Height))
-	x := ((hBits) << 32) | wBits
-	return uintptr(x)
+	return ((hBits) << 32) | wBits
 	//return *(*uintptr)(unsafe.Pointer(&sf))
 }
 func UintptrTo_D2D_SIZE_F(in uintptr) (out D2D_SIZE_F) {
