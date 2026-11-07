@@ -37,11 +37,13 @@ func (b *ID2D1Bitmap) Release() ULONG {
 }
 func (b *ID2D1Bitmap) GetSize() (sf D2D1_SIZE_F) {
 	r0, _, _ := syscall.SyscallN(b.Vtbl.GetSize, uintptr(unsafe.Pointer(b)))
-	return UintptrTo_D2D_SIZE_F(r0)
+	sfPacked := uint64(r0)
+	return Uint64To_D2D_SIZE_F(sfPacked)
 }
 func (b *ID2D1Bitmap) GetPixelSize() (su D2D1_SIZE_U) {
 	r0, _, _ := syscall.SyscallN(b.Vtbl.GetPixelSize, uintptr(unsafe.Pointer(b)))
-	return UintptrTo_D2D_SIZE_U(r0)
+	suPacked := uint64(r0)
+	return Uint64To_D2D_SIZE_U(suPacked)
 }
 func (b *ID2D1Bitmap) CopyFromMemory(dstRect *D2D1_RECT_U, srcData []byte, pitch UINT32) (hr HRESULT, err error) {
 	r0, _, _ := syscall.SyscallN(b.Vtbl.CopyFromMemory, uintptr(unsafe.Pointer(b)), uintptr(unsafe.Pointer(dstRect)), uintptr(unsafe.Pointer(unsafe.SliceData(srcData))), uintptr(pitch))

@@ -85,8 +85,8 @@ func (wrt *ID2D1HwndRenderTarget) Release() ULONG {
 	r0, _, _ := syscall.SyscallN(wrt.Vtbl.Release, uintptr(unsafe.Pointer(wrt)))
 	return ULONG(r0)
 }
-func (wrt *ID2D1HwndRenderTarget) CreateBitmap(size D2D1_SIZE_U, srcData []byte, pitch UINT32, bitmapProperties *D2D1_BITMAP_PROPERTIES, bitmap **ID2D1Bitmap) (hr HRESULT, err error) {
-	r0, _, _ := syscall.SyscallN(wrt.Vtbl.CreateBitmap, uintptr(unsafe.Pointer(wrt)), uintptr(size.ToUint64()), uintptr(unsafe.Pointer(unsafe.SliceData(srcData))), uintptr(pitch), uintptr(unsafe.Pointer(bitmapProperties)), uintptr(unsafe.Pointer(bitmap)))
+func (wrt *ID2D1HwndRenderTarget) CreateBitmap(sizePacked uint64, srcData []byte, pitch UINT32, bitmapProperties *D2D1_BITMAP_PROPERTIES, bitmap **ID2D1Bitmap) (hr HRESULT, err error) {
+	r0, _, _ := syscall.SyscallN(wrt.Vtbl.CreateBitmap, uintptr(unsafe.Pointer(wrt)), uintptr(sizePacked), uintptr(unsafe.Pointer(unsafe.SliceData(srcData))), uintptr(pitch), uintptr(unsafe.Pointer(bitmapProperties)), uintptr(unsafe.Pointer(bitmap)))
 	hr = HRESULT(r0)
 	if hr != S_OK {
 		err = syscall.Errno(hr)

@@ -17,18 +17,23 @@ import (
 )
 
 type App struct {
-	settings        *as.AppSettings
-	instance        windows.Handle
-	printer         *p.Printer[any]
-	images          []*img.Image
-	hwnd            w32.HWND
-	width           w32.UINT32
-	height          w32.UINT32
-	direct2DFactory *w32.ID2D1Factory
-	windowClassName w32.LPCWSTR
-	pIWICFactory    *w32.IWICImagingFactory
-	renderTarget    *w32.ID2D1HwndRenderTarget
-	bitmap          *w32.ID2D1Bitmap
+	settings                   *as.AppSettings
+	instance                   windows.Handle
+	printer                    *p.Printer[any]
+	images                     []*img.Image
+	hwnd                       w32.HWND
+	width                      w32.UINT32
+	height                     w32.UINT32
+	direct2DFactory            *w32.ID2D1Factory
+	windowClassName            w32.LPCWSTR
+	pIWICFactory               *w32.IWICImagingFactory
+	renderTargetProperties     *w32.D2D1_RENDER_TARGET_PROPERTIES
+	hwndRenderTargetProperties *w32.D2D1_HWND_RENDER_TARGET_PROPERTIES
+	renderTarget               *w32.ID2D1HwndRenderTarget
+	bitmapProperties           *w32.D2D1_BITMAP_PROPERTIES
+	bitmapSize                 *w32.D2D1_SIZE_U
+	bitmapSizePacked           uint64
+	bitmap                     *w32.ID2D1Bitmap
 }
 
 func NewApp(settings *as.AppSettings, instance windows.Handle) (app *App, err error) {
@@ -514,7 +519,7 @@ func (app *App) onRender() (err error) {
 	}
 
 	app.renderTarget.BeginDraw()
-	var identityMatrix = w32.D2D1_Matrix3x2F_Identity()
+	var identityMatrix = w32.D2D_Matrix3x2F_Identity()
 	app.renderTarget.SetTransform(&identityMatrix)
 	var color = w32.D2D1_ColorF(w32.D2D1_ColorF_Gray)
 	app.renderTarget.Clear(&color)
@@ -569,23 +574,23 @@ func (app *App) createRenderTarget() (err error) {
 	var size = w32.D2D1_SizeU(uint32(rect.Right-rect.Left), uint32(rect.Bottom-rect.Top))
 
 	var renderTargetProperties = w32.RenderTargetProperties()
-
 	if app.settings.UseHardwareRendering {
 		renderTargetProperties.Type = w32.D2D1_RENDER_TARGET_TYPE_HARDWARE
 	} else {
 		renderTargetProperties.Type = w32.D2D1_RENDER_TARGET_TYPE_SOFTWARE
 	}
-
 	renderTargetProperties.PixelFormat = w32.D2D1_PIXEL_FORMAT{
 		Format:    app.settings.RenderTargetFormat.PixelFormat,
 		AlphaMode: app.settings.RenderTargetFormat.AlphaMode,
 	}
+	app.renderTargetProperties = &renderTargetProperties
 
 	var hwndRenderTargetProperties = w32.HwndRenderTargetProperties(app.hwnd, size, w32.D2D1_PRESENT_OPTIONS_NONE)
+	app.hwndRenderTargetProperties = &hwndRenderTargetProperties
 
 	// List of formats supported by ID2D1HwndRenderTarget in Direct2D:
 	// https://learn.microsoft.com/en-us/windows/win32/direct2d/supported-pixel-formats-and-alpha-modes#supported-formats-for-id2d1hwndrendertarget
-	_, err = app.direct2DFactory.CreateHwndRenderTarget(&renderTargetProperties, &hwndRenderTargetProperties, &app.renderTarget)
+	_, err = app.direct2DFactory.CreateHwndRenderTarget(app.renderTargetProperties, app.hwndRenderTargetProperties, &app.renderTarget)
 	if err != nil {
 		return err
 	}
@@ -638,10 +643,12 @@ func (app *App) loadBitmap() (err error) {
 		return err
 	}
 
-	var size = w32.D2D1_SIZE_U{
+	var bitmapSize = w32.D2D1_SIZE_U{
 		Width:  w32.UINT32(image.Size.Width),
 		Height: w32.UINT32(image.Size.Height),
 	}
+	app.bitmapSize = &bitmapSize
+	app.bitmapSizePacked = app.bitmapSize.ToUint64()
 
 	// While we do not support YCbCr format, we process only RGBA images.
 	var lineStride int
@@ -656,19 +663,26 @@ func (app *App) loadBitmap() (err error) {
 		DpiX: w32.DefaultDpiX,
 		DpiY: w32.DefaultDpiY,
 	}
+	app.bitmapProperties = &bitmapProperties
+
+	//TODO
+	app.printMessage(cio.FormatMessage("Bitmap size: %v", app.bitmapSize))
+	app.printMessage(cio.FormatMessage("Bitmap size packed: %v", app.bitmapSizePacked))
 
 	// List of formats supported by ID2D1Bitmap in Direct2D:
 	// https: //learn.microsoft.com/en-us/windows/win32/direct2d/supported-pixel-formats-and-alpha-modes#specifying-a-pixel-format-for-an-id2d1bitmap
-	_, err = app.renderTarget.CreateBitmap(size, pixelData, pitch, &bitmapProperties, &app.bitmap)
+	_, err = app.renderTarget.CreateBitmap(app.bitmapSizePacked, pixelData, pitch, app.bitmapProperties, &app.bitmap)
 	if err != nil {
 		return err
 	}
 
 	//TODO
+	app.printMessage(cio.FormatMessage("Bitmap size: %v", app.bitmapSize))
+	app.printMessage(cio.FormatMessage("Bitmap size packed: %v", app.bitmapSizePacked))
 	sizeInDip := app.bitmap.GetSize()
-	app.printMessage(cio.FormatMessage("Bitmap size in DIP: %+v", sizeInDip))
+	app.printMessage(cio.FormatMessage("Bitmap size in DIP: %v", sizeInDip))
 	sizeInPx := app.bitmap.GetPixelSize()
-	app.printMessage(cio.FormatMessage("Bitmap size in pixels: %+v", sizeInPx))
+	app.printMessage(cio.FormatMessage("Bitmap size in pixels: %v", sizeInPx))
 
 	return nil
 }

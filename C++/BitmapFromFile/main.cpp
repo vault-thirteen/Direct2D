@@ -187,6 +187,11 @@ HRESULT DemoApp::LoadBitmapFromFile(PCWSTR filePath, int width, int height) {
         return hr;
     }
 
+    D2D1_SIZE_F sfSize = m_pBitmap->GetSize();
+    D2D1_SIZE_U suSize = m_pBitmap->GetPixelSize();
+    std::cout << "sfSize.w=" << sfSize.width << " sfSize.h=" << sfSize.height << "\n";
+    std::cout << "suSize.w=" << suSize.width << " suSize.h=" << suSize.height << "\n";
+
     return S_OK;
 }
 
