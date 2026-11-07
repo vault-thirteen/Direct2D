@@ -1,0 +1,6 @@
+.idea
+vendor
+cmake-build-debug
+cmake-build-release
+*.exe
+pixels.bin
