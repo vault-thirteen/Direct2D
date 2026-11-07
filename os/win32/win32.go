@@ -1,5 +1,7 @@
 package w32
 
+import "unsafe"
+
 //go:generate mkwinsyscall -output zsyscall_windows.go win32.go
 
 // Functions that set last error:
@@ -34,3 +36,11 @@ package w32
 //sys SetLastError(dwErrCode DWORD) = kernel32.SetLastError
 //sys SetWindowLongPtrW(hWnd HWND, nIndex int32, dwNewLong LONG_PTR)(lp LONG_PTR) = user32.SetWindowLongPtrW
 */
+
+func StructArg[T any](v T) (x uintptr) {
+	if unsafe.Sizeof(v) > unsafe.Sizeof(x) {
+		panic("win32: by-value struct is too large to pass in a register")
+	}
+	*(*T)(unsafe.Pointer(&x)) = v
+	return x
+}
