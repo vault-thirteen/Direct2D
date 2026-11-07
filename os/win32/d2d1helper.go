@@ -6,7 +6,7 @@ type Size[T any] struct {
 }
 
 func D2D1_SizeU(width UINT32, height UINT32) D2D1_SIZE_U {
-	return D2D1_SIZE_U(Size[UINT32]{Width: width, Height: height})
+	return D2D1_SIZE_U{Width: width, Height: height}
 }
 
 type Rect[T any] struct {
