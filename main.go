@@ -20,6 +20,7 @@ func main() {
 			UseDirect2dDebug:       false,
 			ShowOsMessages:         false,
 			ShowWindowSizeOnResize: true,
+			ShowMouseCoordinates:   true,
 		},
 		LockThread: true,
 		Window: as.AppWindowSettings{

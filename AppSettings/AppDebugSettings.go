@@ -5,4 +5,5 @@ type AppDebugSettings struct {
 	UseDirect2dDebug       bool
 	ShowOsMessages         bool
 	ShowWindowSizeOnResize bool
+	ShowMouseCoordinates   bool
 }

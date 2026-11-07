@@ -2,6 +2,7 @@ package a
 
 import (
 	"runtime"
+	"strconv"
 	"syscall"
 
 	"unsafe"
@@ -364,6 +365,188 @@ func (app *App) wndProc(hwnd w32.HWND, message w32.WM, wParam w32.WPARAM, lParam
 				err = c.FunctionFailure("ValidateRect")
 				app.printMessage(err)
 				return 0
+			}
+
+			return 0
+		}
+
+	case w32.WM_MOUSEMOVE:
+		{
+			mx := int(int16(lParam & 0xffff))
+			my := int(int16((lParam >> 16) & 0xffff))
+			if app.settings.Debug.IsEnabled {
+				if app.settings.Debug.ShowMouseCoordinates {
+					mouseText := cio.FormatMessage(c.Msg_MouseX + ":" + strconv.Itoa(mx) + " " + c.Msg_MouseY + ":" + strconv.Itoa(my))
+					app.printMessage(mouseText)
+				}
+			}
+
+			return 0
+		}
+
+	case w32.WM_LBUTTONDOWN:
+		{
+			mx := int(int16(lParam & 0xffff))
+			my := int(int16((lParam >> 16) & 0xffff))
+			if app.settings.Debug.IsEnabled {
+				mouseText := cio.FormatMessage(c.Msg_MouseX + ":" + strconv.Itoa(mx) + " " + c.Msg_MouseY + ":" + strconv.Itoa(my))
+				app.printMessage(c.Msg_LMB + " " + c.Msg_Pressed + ". " + mouseText)
+			}
+
+			return 0
+		}
+
+	case w32.WM_LBUTTONUP:
+		{
+			mx := int(int16(lParam & 0xffff))
+			my := int(int16((lParam >> 16) & 0xffff))
+			if app.settings.Debug.IsEnabled {
+				mouseText := cio.FormatMessage(c.Msg_MouseX + ":" + strconv.Itoa(mx) + " " + c.Msg_MouseY + ":" + strconv.Itoa(my))
+				app.printMessage(c.Msg_LMB + " " + c.Msg_Released + ". " + mouseText)
+			}
+
+			return 0
+		}
+
+	case w32.WM_RBUTTONDOWN:
+		{
+			mx := int(int16(lParam & 0xffff))
+			my := int(int16((lParam >> 16) & 0xffff))
+			if app.settings.Debug.IsEnabled {
+				mouseText := cio.FormatMessage(c.Msg_MouseX + ":" + strconv.Itoa(mx) + " " + c.Msg_MouseY + ":" + strconv.Itoa(my))
+				app.printMessage(c.Msg_RMB + " " + c.Msg_Pressed + ". " + mouseText)
+			}
+
+			return 0
+		}
+
+	case w32.WM_RBUTTONUP:
+		{
+			mx := int(int16(lParam & 0xffff))
+			my := int(int16((lParam >> 16) & 0xffff))
+			if app.settings.Debug.IsEnabled {
+				mouseText := cio.FormatMessage(c.Msg_MouseX + ":" + strconv.Itoa(mx) + " " + c.Msg_MouseY + ":" + strconv.Itoa(my))
+				app.printMessage(c.Msg_RMB + " " + c.Msg_Released + ". " + mouseText)
+			}
+
+			return 0
+		}
+
+	case w32.WM_MBUTTONDOWN:
+		{
+			mx := int(int16(lParam & 0xffff))
+			my := int(int16((lParam >> 16) & 0xffff))
+			if app.settings.Debug.IsEnabled {
+				mouseText := cio.FormatMessage(c.Msg_MouseX + ":" + strconv.Itoa(mx) + " " + c.Msg_MouseY + ":" + strconv.Itoa(my))
+				app.printMessage(c.Msg_MMB + " " + c.Msg_Pressed + ". " + mouseText)
+			}
+
+			return 0
+		}
+
+	case w32.WM_MBUTTONUP:
+		{
+			mx := int(int16(lParam & 0xffff))
+			my := int(int16((lParam >> 16) & 0xffff))
+			if app.settings.Debug.IsEnabled {
+				mouseText := cio.FormatMessage(c.Msg_MouseX + ":" + strconv.Itoa(mx) + " " + c.Msg_MouseY + ":" + strconv.Itoa(my))
+				app.printMessage(c.Msg_MMB + " " + c.Msg_Released + ". " + mouseText)
+			}
+
+			return 0
+		}
+
+	case w32.WM_KEYDOWN:
+		{
+			keyCode := cio.KeyCode(wParam)
+			if app.settings.Debug.IsEnabled {
+				keyName, ok := cio.KeyCodeNames[keyCode]
+				if ok {
+					app.printMessage(keyName + " " + c.Msg_Pressed)
+				}
+			}
+
+			return 0
+		}
+
+	case w32.WM_SYSKEYDOWN:
+		{
+			keyCode := cio.KeyCode(wParam)
+			if app.settings.Debug.IsEnabled {
+				keyName, ok := cio.KeyCodeNames[keyCode]
+				if ok {
+					app.printMessage(keyName + " " + c.Msg_Pressed)
+				}
+			}
+
+			return 0
+		}
+
+	case w32.WM_KEYUP:
+		{
+			keyCode := cio.KeyCode(wParam)
+			if app.settings.Debug.IsEnabled {
+				keyName, ok := cio.KeyCodeNames[keyCode]
+				if ok {
+					app.printMessage(keyName + " " + c.Msg_Released)
+				}
+			}
+
+			return 0
+		}
+
+	case w32.WM_SYSKEYUP:
+		{
+			keyCode := cio.KeyCode(wParam)
+			if app.settings.Debug.IsEnabled {
+				keyName, ok := cio.KeyCodeNames[keyCode]
+				if ok {
+					app.printMessage(keyName + " " + c.Msg_Released)
+				}
+			}
+
+			return 0
+		}
+
+	case w32.WM_MOUSEWHEEL:
+		{
+			mwDelta := int16(wParam >> 16)
+			if app.settings.Debug.IsEnabled {
+				if mwDelta > 0 {
+					app.printMessage(c.Msg_MouseWheelUp)
+				} else {
+					app.printMessage(c.Msg_MouseWheelDown)
+				}
+			}
+
+			return 0
+		}
+
+	case w32.WM_XBUTTONDOWN:
+		{
+			xButton := uint16(wParam >> 16)
+			if app.settings.Debug.IsEnabled {
+				switch xButton {
+				case w32.XBUTTON1:
+					app.printMessage(c.Msg_XMB1 + " " + c.Msg_Pressed)
+				case w32.XBUTTON2:
+					app.printMessage(c.Msg_XMB2 + " " + c.Msg_Pressed)
+				}
+			}
+
+			return 0
+		}
+
+	case w32.WM_XBUTTONUP:
+		{
+			xButton := uint16(wParam >> 16)
+			if app.settings.Debug.IsEnabled {
+				switch xButton {
+				case w32.XBUTTON1:
+					app.printMessage(c.Msg_XMB1 + " " + c.Msg_Released)
+				case w32.XBUTTON2:
+					app.printMessage(c.Msg_XMB2 + " " + c.Msg_Released)
+				}
 			}
 
 			return 0

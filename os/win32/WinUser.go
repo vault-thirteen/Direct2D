@@ -572,3 +572,9 @@ const (
 	PM_REMOVE   = 0x0001
 	PM_NOYIELD  = 0x0002
 )
+
+/* XButton values are WORD flags */
+const (
+	XBUTTON1 = 0x0001
+	XBUTTON2 = 0x0002
+)

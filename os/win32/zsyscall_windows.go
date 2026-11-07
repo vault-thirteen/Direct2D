@@ -51,6 +51,7 @@ var (
 	procDestroyWindow     = moduser32.NewProc("DestroyWindow")
 	procDispatchMessageW  = moduser32.NewProc("DispatchMessageW")
 	procGetClientRect     = moduser32.NewProc("GetClientRect")
+	procGetKeyState       = moduser32.NewProc("GetKeyState")
 	procGetMessageW       = moduser32.NewProc("GetMessageW")
 	procGetWindowLongPtrW = moduser32.NewProc("GetWindowLongPtrW")
 	procInvalidateRect    = moduser32.NewProc("InvalidateRect")
@@ -119,6 +120,12 @@ func GetClientRect(hWnd HWND, lpRect *RECT) (b BOOL, err error) {
 	if b == 0 {
 		err = errnoErr(e1)
 	}
+	return
+}
+
+func GetKeyState(nVirtKey int32) (ks SHORT) {
+	r0, _, _ := syscall.SyscallN(procGetKeyState.Addr(), uintptr(nVirtKey))
+	ks = SHORT(r0)
 	return
 }
 

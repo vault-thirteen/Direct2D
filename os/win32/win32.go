@@ -29,6 +29,7 @@ import "unsafe"
 //sys DefWindowProcW(hWnd HWND, Msg WM, wParam WPARAM, lParam LPARAM)(lr LRESULT) = user32.DefWindowProcW
 //sys PostQuitMessage(nExitCode int32) = user32.PostQuitMessage
 //sys CoCreateInstance(rclsid *windows.GUID, pUnkOuter *IUnknown, dwClsContext DWORD, riid *windows.GUID, ppv *unsafe.Pointer) (hr HRESULT) = ole32.CoCreateInstance
+//sys GetKeyState(nVirtKey int32)(ks SHORT) = user32.GetKeyState
 */
 
 // Non-standard logics. Be very careful using these functions.
