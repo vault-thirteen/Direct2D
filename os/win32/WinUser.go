@@ -542,6 +542,10 @@ const (
 	WM_APP WM = 0x8000
 )
 
+const (
+	RepeatedKeyMarker = 0x40000000 // 1 << 30.
+)
+
 // GLWP constants.
 const (
 	GWLP_WNDPROC    = -4

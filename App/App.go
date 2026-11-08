@@ -459,10 +459,13 @@ func (app *App) wndProc(hwnd w32.HWND, message w32.WM, wParam w32.WPARAM, lParam
 	case w32.WM_KEYDOWN:
 		{
 			keyCode := cio.KeyCode(wParam)
+			isRepeated := (lParam & w32.RepeatedKeyMarker) != 0
 			if app.settings.Debug.IsEnabled {
-				keyName, ok := cio.KeyCodeNames[keyCode]
-				if ok {
-					app.printMessage(keyName + " " + c.Msg_Pressed)
+				if !isRepeated {
+					keyName, ok := cio.KeyCodeNames[keyCode]
+					if ok {
+						app.printMessage(keyName + " " + c.Msg_Pressed)
+					}
 				}
 			}
 
@@ -472,10 +475,13 @@ func (app *App) wndProc(hwnd w32.HWND, message w32.WM, wParam w32.WPARAM, lParam
 	case w32.WM_SYSKEYDOWN:
 		{
 			keyCode := cio.KeyCode(wParam)
+			isRepeated := (lParam & w32.RepeatedKeyMarker) != 0
 			if app.settings.Debug.IsEnabled {
-				keyName, ok := cio.KeyCodeNames[keyCode]
-				if ok {
-					app.printMessage(keyName + " " + c.Msg_Pressed)
+				if !isRepeated {
+					keyName, ok := cio.KeyCodeNames[keyCode]
+					if ok {
+						app.printMessage(keyName + " " + c.Msg_Pressed)
+					}
 				}
 			}
 
