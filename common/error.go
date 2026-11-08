@@ -9,6 +9,8 @@ const (
 	Err_UnsupportedPixelFormat  = "unsupported pixel format"
 	Err_BrokenData              = "broken data"
 	Err_SizeMismatch            = "size mismatch"
+	Err_UnknownType             = "unknown type"
+	Err_UnknownState            = "unknown state"
 
 	Errf_FunctionFailure         = "function failure: %s"
 	Errf_SizeExceedsMaximumSize  = "requested size exceeds maximum value: %d vs %d"

@@ -5,6 +5,7 @@ type AppSettings struct {
 	LockThread                               bool
 	Window                                   AppWindowSettings
 	PrintJobsChannelSize                     int
+	MainControllerMessageChannelSize         int
 	ImagesToLoad                             []string
 	UseHardwareRendering                     bool
 	UseStraightAlphaChannelForImportedImages bool

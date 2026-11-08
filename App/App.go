@@ -2,13 +2,13 @@ package a
 
 import (
 	"runtime"
-	"strconv"
 	"syscall"
 
 	"unsafe"
 
 	as "github.com/vault-thirteen/Direct2D/AppSettings"
 	img "github.com/vault-thirteen/Direct2D/Image"
+	mc "github.com/vault-thirteen/Direct2D/MainController"
 	p "github.com/vault-thirteen/Direct2D/Printer"
 	c "github.com/vault-thirteen/Direct2D/common"
 	w32 "github.com/vault-thirteen/Direct2D/os/win32"
@@ -21,6 +21,7 @@ type App struct {
 	settings                   *as.AppSettings
 	instance                   windows.Handle
 	printer                    *p.Printer[any]
+	mc                         *mc.MainController
 	images                     []*img.Image
 	hwnd                       w32.HWND
 	width                      w32.UINT32
@@ -60,6 +61,18 @@ func NewApp(settings *as.AppSettings, instance windows.Handle) (app *App, err er
 		return nil, err
 	}
 
+	// Main controller.
+	var mainControllerSettings *mc.MainControllerSettings
+	mainControllerSettings, err = mc.NewMainControllerSettings(app.settings.MainControllerMessageChannelSize, app.settings.Debug.IsEnabled)
+	if err != nil {
+		return nil, err
+	}
+
+	app.mc, err = mc.NewMainController(mainControllerSettings)
+	if err != nil {
+		return nil, err
+	}
+
 	// Images.
 	var image *img.Image
 	for _, filePath := range settings.ImagesToLoad {
@@ -76,7 +89,7 @@ func NewApp(settings *as.AppSettings, instance windows.Handle) (app *App, err er
 func (app *App) Run() (err error) {
 	var needRollBack = true
 
-	// 0. Lock the O.S. thread.
+	// 1. Lock the O.S. thread.
 	{
 		if app.settings.LockThread {
 			runtime.LockOSThread()
@@ -88,7 +101,7 @@ func (app *App) Run() (err error) {
 		}
 	}
 
-	// 1. Start the printer.
+	// 2. Start the printer.
 	{
 		err = app.printer.Start()
 		if err != nil {
@@ -103,7 +116,22 @@ func (app *App) Run() (err error) {
 		}()
 	}
 
-	// 2. Initialise the COM library.
+	// 3. Start the main controller.
+	{
+		err = app.mc.Start()
+		if err != nil {
+			return err
+		}
+
+		defer func() {
+			if needRollBack {
+				derr := app.mc.Stop()
+				err = errors.Combine(err, derr)
+			}
+		}()
+	}
+
+	// 4. Initialise the COM library.
 	{
 		err = windows.CoInitializeEx(0, windows.COINIT_MULTITHREADED)
 		if err != nil {
@@ -117,7 +145,7 @@ func (app *App) Run() (err error) {
 		}()
 	}
 
-	// 3. Create the Direct2D factory.
+	// 5. Create the Direct2D factory.
 	{
 		var factoryOptions w32.D2D1_FACTORY_OPTIONS
 		if app.settings.Debug.IsEnabled {
@@ -143,7 +171,7 @@ func (app *App) Run() (err error) {
 		}()
 	}
 
-	// 4. Register the window class.
+	// 6. Register the window class.
 	var wc w32.WNDCLASSEXW
 	{
 		var cursor w32.HCURSOR
@@ -184,7 +212,7 @@ func (app *App) Run() (err error) {
 		}()
 	}
 
-	// 5. Create a window.
+	// 7. Create a window.
 	{
 		var windowName w32.LPCWSTR
 		windowName, err = syscall.UTF16PtrFromString(app.settings.Window.Name)
@@ -218,7 +246,7 @@ func (app *App) Run() (err error) {
 		}()
 	}
 
-	// 6. Show the window.
+	// 8. Show the window.
 	{
 		w32.ShowWindow(app.hwnd, windows.SW_SHOWNORMAL)
 
@@ -229,7 +257,7 @@ func (app *App) Run() (err error) {
 		}
 	}
 
-	// 7. Initialise the Windows Imaging Component (WIC).
+	// 9. Initialise the Windows Imaging Component (WIC).
 	{
 		app.pIWICFactory = nil
 		var hr w32.HRESULT
@@ -374,11 +402,25 @@ func (app *App) wndProc(hwnd w32.HWND, message w32.WM, wParam w32.WPARAM, lParam
 		{
 			mx := int(int16(lParam & 0xffff))
 			my := int(int16((lParam >> 16) & 0xffff))
-			if app.settings.Debug.IsEnabled {
-				if app.settings.Debug.ShowMouseCoordinates {
-					mouseText := cio.FormatMessage(c.Msg_MouseX + ":" + strconv.Itoa(mx) + " " + c.Msg_MouseY + ":" + strconv.Itoa(my))
-					app.printMessage(mouseText)
-				}
+
+			var mouseEvent *mc.MainControllerMessageMouseEvent
+			mouseEvent, err = mc.NewMainControllerMessageMouseEvent(mx, my, mc.MouseButtonType_None, mc.ButtonState_Released)
+			if err != nil {
+				app.printMessage(err)
+				return 0
+			}
+
+			var mcm *mc.MainControllerMessage
+			mcm, err = mc.NewMainControllerMessage(mc.MainControllerMessageType_MouseEvent, mouseEvent)
+			if err != nil {
+				app.printMessage(err)
+				return 0
+			}
+
+			err = app.mc.ReceiveMessage(mcm)
+			if err != nil {
+				app.printMessage(err)
+				return 0
 			}
 
 			return 0
@@ -388,9 +430,25 @@ func (app *App) wndProc(hwnd w32.HWND, message w32.WM, wParam w32.WPARAM, lParam
 		{
 			mx := int(int16(lParam & 0xffff))
 			my := int(int16((lParam >> 16) & 0xffff))
-			if app.settings.Debug.IsEnabled {
-				mouseText := cio.FormatMessage(c.Msg_MouseX + ":" + strconv.Itoa(mx) + " " + c.Msg_MouseY + ":" + strconv.Itoa(my))
-				app.printMessage(c.Msg_LMB + " " + c.Msg_Pressed + ". " + mouseText)
+
+			var mouseEvent *mc.MainControllerMessageMouseEvent
+			mouseEvent, err = mc.NewMainControllerMessageMouseEvent(mx, my, mc.MouseButtonType_Left, mc.ButtonState_Pressed)
+			if err != nil {
+				app.printMessage(err)
+				return 0
+			}
+
+			var mcm *mc.MainControllerMessage
+			mcm, err = mc.NewMainControllerMessage(mc.MainControllerMessageType_MouseEvent, mouseEvent)
+			if err != nil {
+				app.printMessage(err)
+				return 0
+			}
+
+			err = app.mc.ReceiveMessage(mcm)
+			if err != nil {
+				app.printMessage(err)
+				return 0
 			}
 
 			return 0
@@ -400,9 +458,25 @@ func (app *App) wndProc(hwnd w32.HWND, message w32.WM, wParam w32.WPARAM, lParam
 		{
 			mx := int(int16(lParam & 0xffff))
 			my := int(int16((lParam >> 16) & 0xffff))
-			if app.settings.Debug.IsEnabled {
-				mouseText := cio.FormatMessage(c.Msg_MouseX + ":" + strconv.Itoa(mx) + " " + c.Msg_MouseY + ":" + strconv.Itoa(my))
-				app.printMessage(c.Msg_LMB + " " + c.Msg_Released + ". " + mouseText)
+
+			var mouseEvent *mc.MainControllerMessageMouseEvent
+			mouseEvent, err = mc.NewMainControllerMessageMouseEvent(mx, my, mc.MouseButtonType_Left, mc.ButtonState_Released)
+			if err != nil {
+				app.printMessage(err)
+				return 0
+			}
+
+			var mcm *mc.MainControllerMessage
+			mcm, err = mc.NewMainControllerMessage(mc.MainControllerMessageType_MouseEvent, mouseEvent)
+			if err != nil {
+				app.printMessage(err)
+				return 0
+			}
+
+			err = app.mc.ReceiveMessage(mcm)
+			if err != nil {
+				app.printMessage(err)
+				return 0
 			}
 
 			return 0
@@ -412,9 +486,25 @@ func (app *App) wndProc(hwnd w32.HWND, message w32.WM, wParam w32.WPARAM, lParam
 		{
 			mx := int(int16(lParam & 0xffff))
 			my := int(int16((lParam >> 16) & 0xffff))
-			if app.settings.Debug.IsEnabled {
-				mouseText := cio.FormatMessage(c.Msg_MouseX + ":" + strconv.Itoa(mx) + " " + c.Msg_MouseY + ":" + strconv.Itoa(my))
-				app.printMessage(c.Msg_RMB + " " + c.Msg_Pressed + ". " + mouseText)
+
+			var mouseEvent *mc.MainControllerMessageMouseEvent
+			mouseEvent, err = mc.NewMainControllerMessageMouseEvent(mx, my, mc.MouseButtonType_Right, mc.ButtonState_Pressed)
+			if err != nil {
+				app.printMessage(err)
+				return 0
+			}
+
+			var mcm *mc.MainControllerMessage
+			mcm, err = mc.NewMainControllerMessage(mc.MainControllerMessageType_MouseEvent, mouseEvent)
+			if err != nil {
+				app.printMessage(err)
+				return 0
+			}
+
+			err = app.mc.ReceiveMessage(mcm)
+			if err != nil {
+				app.printMessage(err)
+				return 0
 			}
 
 			return 0
@@ -424,9 +514,25 @@ func (app *App) wndProc(hwnd w32.HWND, message w32.WM, wParam w32.WPARAM, lParam
 		{
 			mx := int(int16(lParam & 0xffff))
 			my := int(int16((lParam >> 16) & 0xffff))
-			if app.settings.Debug.IsEnabled {
-				mouseText := cio.FormatMessage(c.Msg_MouseX + ":" + strconv.Itoa(mx) + " " + c.Msg_MouseY + ":" + strconv.Itoa(my))
-				app.printMessage(c.Msg_RMB + " " + c.Msg_Released + ". " + mouseText)
+
+			var mouseEvent *mc.MainControllerMessageMouseEvent
+			mouseEvent, err = mc.NewMainControllerMessageMouseEvent(mx, my, mc.MouseButtonType_Right, mc.ButtonState_Released)
+			if err != nil {
+				app.printMessage(err)
+				return 0
+			}
+
+			var mcm *mc.MainControllerMessage
+			mcm, err = mc.NewMainControllerMessage(mc.MainControllerMessageType_MouseEvent, mouseEvent)
+			if err != nil {
+				app.printMessage(err)
+				return 0
+			}
+
+			err = app.mc.ReceiveMessage(mcm)
+			if err != nil {
+				app.printMessage(err)
+				return 0
 			}
 
 			return 0
@@ -436,9 +542,25 @@ func (app *App) wndProc(hwnd w32.HWND, message w32.WM, wParam w32.WPARAM, lParam
 		{
 			mx := int(int16(lParam & 0xffff))
 			my := int(int16((lParam >> 16) & 0xffff))
-			if app.settings.Debug.IsEnabled {
-				mouseText := cio.FormatMessage(c.Msg_MouseX + ":" + strconv.Itoa(mx) + " " + c.Msg_MouseY + ":" + strconv.Itoa(my))
-				app.printMessage(c.Msg_MMB + " " + c.Msg_Pressed + ". " + mouseText)
+
+			var mouseEvent *mc.MainControllerMessageMouseEvent
+			mouseEvent, err = mc.NewMainControllerMessageMouseEvent(mx, my, mc.MouseButtonType_Middle, mc.ButtonState_Pressed)
+			if err != nil {
+				app.printMessage(err)
+				return 0
+			}
+
+			var mcm *mc.MainControllerMessage
+			mcm, err = mc.NewMainControllerMessage(mc.MainControllerMessageType_MouseEvent, mouseEvent)
+			if err != nil {
+				app.printMessage(err)
+				return 0
+			}
+
+			err = app.mc.ReceiveMessage(mcm)
+			if err != nil {
+				app.printMessage(err)
+				return 0
 			}
 
 			return 0
@@ -448,9 +570,25 @@ func (app *App) wndProc(hwnd w32.HWND, message w32.WM, wParam w32.WPARAM, lParam
 		{
 			mx := int(int16(lParam & 0xffff))
 			my := int(int16((lParam >> 16) & 0xffff))
-			if app.settings.Debug.IsEnabled {
-				mouseText := cio.FormatMessage(c.Msg_MouseX + ":" + strconv.Itoa(mx) + " " + c.Msg_MouseY + ":" + strconv.Itoa(my))
-				app.printMessage(c.Msg_MMB + " " + c.Msg_Released + ". " + mouseText)
+
+			var mouseEvent *mc.MainControllerMessageMouseEvent
+			mouseEvent, err = mc.NewMainControllerMessageMouseEvent(mx, my, mc.MouseButtonType_Middle, mc.ButtonState_Released)
+			if err != nil {
+				app.printMessage(err)
+				return 0
+			}
+
+			var mcm *mc.MainControllerMessage
+			mcm, err = mc.NewMainControllerMessage(mc.MainControllerMessageType_MouseEvent, mouseEvent)
+			if err != nil {
+				app.printMessage(err)
+				return 0
+			}
+
+			err = app.mc.ReceiveMessage(mcm)
+			if err != nil {
+				app.printMessage(err)
+				return 0
 			}
 
 			return 0
@@ -460,13 +598,35 @@ func (app *App) wndProc(hwnd w32.HWND, message w32.WM, wParam w32.WPARAM, lParam
 		{
 			keyCode := cio.KeyCode(wParam)
 			isRepeated := (lParam & w32.RepeatedKeyMarker) != 0
+			if isRepeated {
+				return 0
+			}
+
+			var keyboardEvent *mc.MainControllerMessageKeyboardEvent
+			keyboardEvent, err = mc.NewMainControllerMessageKeyboardEvent(keyCode, mc.ButtonState_Pressed)
+			if err != nil {
+				app.printMessage(err)
+				return 0
+			}
+
 			if app.settings.Debug.IsEnabled {
-				if !isRepeated {
-					keyName, ok := cio.KeyCodeNames[keyCode]
-					if ok {
-						app.printMessage(keyName + " " + c.Msg_Pressed)
-					}
+				keyName, ok := cio.KeyCodeNames[keyCode]
+				if ok {
+					keyboardEvent.ButtonName = &keyName
 				}
+			}
+
+			var mcm *mc.MainControllerMessage
+			mcm, err = mc.NewMainControllerMessage(mc.MainControllerMessageType_KeyboardEvent, keyboardEvent)
+			if err != nil {
+				app.printMessage(err)
+				return 0
+			}
+
+			err = app.mc.ReceiveMessage(mcm)
+			if err != nil {
+				app.printMessage(err)
+				return 0
 			}
 
 			return 0
@@ -476,13 +636,35 @@ func (app *App) wndProc(hwnd w32.HWND, message w32.WM, wParam w32.WPARAM, lParam
 		{
 			keyCode := cio.KeyCode(wParam)
 			isRepeated := (lParam & w32.RepeatedKeyMarker) != 0
+			if isRepeated {
+				return 0
+			}
+
+			var keyboardEvent *mc.MainControllerMessageKeyboardEvent
+			keyboardEvent, err = mc.NewMainControllerMessageKeyboardEvent(keyCode, mc.ButtonState_Pressed)
+			if err != nil {
+				app.printMessage(err)
+				return 0
+			}
+
 			if app.settings.Debug.IsEnabled {
-				if !isRepeated {
-					keyName, ok := cio.KeyCodeNames[keyCode]
-					if ok {
-						app.printMessage(keyName + " " + c.Msg_Pressed)
-					}
+				keyName, ok := cio.KeyCodeNames[keyCode]
+				if ok {
+					keyboardEvent.ButtonName = &keyName
 				}
+			}
+
+			var mcm *mc.MainControllerMessage
+			mcm, err = mc.NewMainControllerMessage(mc.MainControllerMessageType_KeyboardEvent, keyboardEvent)
+			if err != nil {
+				app.printMessage(err)
+				return 0
+			}
+
+			err = app.mc.ReceiveMessage(mcm)
+			if err != nil {
+				app.printMessage(err)
+				return 0
 			}
 
 			return 0
@@ -491,11 +673,32 @@ func (app *App) wndProc(hwnd w32.HWND, message w32.WM, wParam w32.WPARAM, lParam
 	case w32.WM_KEYUP:
 		{
 			keyCode := cio.KeyCode(wParam)
+
+			var keyboardEvent *mc.MainControllerMessageKeyboardEvent
+			keyboardEvent, err = mc.NewMainControllerMessageKeyboardEvent(keyCode, mc.ButtonState_Released)
+			if err != nil {
+				app.printMessage(err)
+				return 0
+			}
+
 			if app.settings.Debug.IsEnabled {
 				keyName, ok := cio.KeyCodeNames[keyCode]
 				if ok {
-					app.printMessage(keyName + " " + c.Msg_Released)
+					keyboardEvent.ButtonName = &keyName
 				}
+			}
+
+			var mcm *mc.MainControllerMessage
+			mcm, err = mc.NewMainControllerMessage(mc.MainControllerMessageType_KeyboardEvent, keyboardEvent)
+			if err != nil {
+				app.printMessage(err)
+				return 0
+			}
+
+			err = app.mc.ReceiveMessage(mcm)
+			if err != nil {
+				app.printMessage(err)
+				return 0
 			}
 
 			return 0
@@ -504,11 +707,32 @@ func (app *App) wndProc(hwnd w32.HWND, message w32.WM, wParam w32.WPARAM, lParam
 	case w32.WM_SYSKEYUP:
 		{
 			keyCode := cio.KeyCode(wParam)
+
+			var keyboardEvent *mc.MainControllerMessageKeyboardEvent
+			keyboardEvent, err = mc.NewMainControllerMessageKeyboardEvent(keyCode, mc.ButtonState_Released)
+			if err != nil {
+				app.printMessage(err)
+				return 0
+			}
+
 			if app.settings.Debug.IsEnabled {
 				keyName, ok := cio.KeyCodeNames[keyCode]
 				if ok {
-					app.printMessage(keyName + " " + c.Msg_Released)
+					keyboardEvent.ButtonName = &keyName
 				}
+			}
+
+			var mcm *mc.MainControllerMessage
+			mcm, err = mc.NewMainControllerMessage(mc.MainControllerMessageType_KeyboardEvent, keyboardEvent)
+			if err != nil {
+				app.printMessage(err)
+				return 0
+			}
+
+			err = app.mc.ReceiveMessage(mcm)
+			if err != nil {
+				app.printMessage(err)
+				return 0
 			}
 
 			return 0
@@ -516,13 +740,35 @@ func (app *App) wndProc(hwnd w32.HWND, message w32.WM, wParam w32.WPARAM, lParam
 
 	case w32.WM_MOUSEWHEEL:
 		{
+			mx := int(int16(lParam & 0xffff))
+			my := int(int16((lParam >> 16) & 0xffff))
+
 			mwDelta := int16(wParam >> 16)
-			if app.settings.Debug.IsEnabled {
-				if mwDelta > 0 {
-					app.printMessage(c.Msg_MouseWheelUp)
-				} else {
-					app.printMessage(c.Msg_MouseWheelDown)
-				}
+			var btnType mc.MouseButtonType
+			if mwDelta > 0 {
+				btnType = mc.MouseButtonType_WheelUp
+			} else {
+				btnType = mc.MouseButtonType_WheelDown
+			}
+
+			var mouseEvent *mc.MainControllerMessageMouseEvent
+			mouseEvent, err = mc.NewMainControllerMessageMouseEvent(mx, my, btnType, mc.ButtonState_Pressed)
+			if err != nil {
+				app.printMessage(err)
+				return 0
+			}
+
+			var mcm *mc.MainControllerMessage
+			mcm, err = mc.NewMainControllerMessage(mc.MainControllerMessageType_MouseEvent, mouseEvent)
+			if err != nil {
+				app.printMessage(err)
+				return 0
+			}
+
+			err = app.mc.ReceiveMessage(mcm)
+			if err != nil {
+				app.printMessage(err)
+				return 0
 			}
 
 			return 0
@@ -530,14 +776,40 @@ func (app *App) wndProc(hwnd w32.HWND, message w32.WM, wParam w32.WPARAM, lParam
 
 	case w32.WM_XBUTTONDOWN:
 		{
+			mx := int(int16(lParam & 0xffff))
+			my := int(int16((lParam >> 16) & 0xffff))
+
 			xButton := uint16(wParam >> 16)
-			if app.settings.Debug.IsEnabled {
-				switch xButton {
-				case w32.XBUTTON1:
-					app.printMessage(c.Msg_XMB1 + " " + c.Msg_Pressed)
-				case w32.XBUTTON2:
-					app.printMessage(c.Msg_XMB2 + " " + c.Msg_Pressed)
-				}
+			var btnType mc.MouseButtonType
+			switch xButton {
+			case w32.XBUTTON1:
+				btnType = mc.MouseButtonType_X1
+			case w32.XBUTTON2:
+				btnType = mc.MouseButtonType_X2
+			default:
+				err = errors.ErrorFromText(c.Err_UnknownType)
+				app.printMessage(err)
+				return 0
+			}
+
+			var mouseEvent *mc.MainControllerMessageMouseEvent
+			mouseEvent, err = mc.NewMainControllerMessageMouseEvent(mx, my, btnType, mc.ButtonState_Pressed)
+			if err != nil {
+				app.printMessage(err)
+				return 0
+			}
+
+			var mcm *mc.MainControllerMessage
+			mcm, err = mc.NewMainControllerMessage(mc.MainControllerMessageType_MouseEvent, mouseEvent)
+			if err != nil {
+				app.printMessage(err)
+				return 0
+			}
+
+			err = app.mc.ReceiveMessage(mcm)
+			if err != nil {
+				app.printMessage(err)
+				return 0
 			}
 
 			return 0
@@ -545,14 +817,40 @@ func (app *App) wndProc(hwnd w32.HWND, message w32.WM, wParam w32.WPARAM, lParam
 
 	case w32.WM_XBUTTONUP:
 		{
+			mx := int(int16(lParam & 0xffff))
+			my := int(int16((lParam >> 16) & 0xffff))
+
 			xButton := uint16(wParam >> 16)
-			if app.settings.Debug.IsEnabled {
-				switch xButton {
-				case w32.XBUTTON1:
-					app.printMessage(c.Msg_XMB1 + " " + c.Msg_Released)
-				case w32.XBUTTON2:
-					app.printMessage(c.Msg_XMB2 + " " + c.Msg_Released)
-				}
+			var btnType mc.MouseButtonType
+			switch xButton {
+			case w32.XBUTTON1:
+				btnType = mc.MouseButtonType_X1
+			case w32.XBUTTON2:
+				btnType = mc.MouseButtonType_X2
+			default:
+				err = errors.ErrorFromText(c.Err_UnknownType)
+				app.printMessage(err)
+				return 0
+			}
+
+			var mouseEvent *mc.MainControllerMessageMouseEvent
+			mouseEvent, err = mc.NewMainControllerMessageMouseEvent(mx, my, btnType, mc.ButtonState_Released)
+			if err != nil {
+				app.printMessage(err)
+				return 0
+			}
+
+			var mcm *mc.MainControllerMessage
+			mcm, err = mc.NewMainControllerMessage(mc.MainControllerMessageType_MouseEvent, mouseEvent)
+			if err != nil {
+				app.printMessage(err)
+				return 0
+			}
+
+			err = app.mc.ReceiveMessage(mcm)
+			if err != nil {
+				app.printMessage(err)
+				return 0
 			}
 
 			return 0
@@ -595,6 +893,19 @@ func (app *App) wndProc(hwnd w32.HWND, message w32.WM, wParam w32.WPARAM, lParam
 		{
 			if app.settings.Debug.IsEnabled {
 				app.printMessage(c.Msg_WM_CLOSE)
+			}
+
+			var mcm *mc.MainControllerMessage
+			mcm, err = mc.NewMainControllerMessage(mc.MainControllerMessageType_Quit, nil)
+			if err != nil {
+				app.printMessage(err)
+				return 0
+			}
+
+			err = app.mc.ReceiveMessage(mcm)
+			if err != nil {
+				app.printMessage(err)
+				return 0
 			}
 
 			//ShowWindow(hwnd, windows.SW_HIDE)

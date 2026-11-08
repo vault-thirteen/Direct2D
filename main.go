@@ -30,7 +30,8 @@ func main() {
 				Height: 480,
 			},
 		},
-		PrintJobsChannelSize: 16,
+		PrintJobsChannelSize:             16,
+		MainControllerMessageChannelSize: 16,
 		ImagesToLoad: []string{
 			`img\Row_of_Town_Houses.jpg`,
 		},
