@@ -24,6 +24,7 @@ type MainController struct {
 	sc             *stct.StartController
 	messageChannel *chan *MainControllerMessage
 	workWg         *sync.WaitGroup
+	mbdp           *MouseButtonDownPos
 }
 
 func NewMainController(settings *MainControllerSettings) (mc *MainController, err error) {
@@ -43,6 +44,7 @@ func NewMainController(settings *MainControllerSettings) (mc *MainController, er
 		sc:             stct.NewStartController(),
 		messageChannel: &ch,
 		workWg:         new(sync.WaitGroup),
+		mbdp:           NewMouseButtonDownPos(),
 	}
 
 	return mc, nil
@@ -104,7 +106,7 @@ func (mc *MainController) runWorker() {
 		if mc.settings.isDebug {
 			switch msg.Type {
 			case MainControllerMessageType_MouseEvent:
-				cio.PrintMessage(msg.MouseEvent)
+				mc.processMouseEvent(msg)
 
 			case MainControllerMessageType_KeyboardEvent:
 				if msg.KeyboardEvent.ButtonName != nil {
@@ -120,6 +122,21 @@ func (mc *MainController) runWorker() {
 
 		//TODO
 	}
+}
+func (mc *MainController) processMouseEvent(msg *MainControllerMessage) {
+	if msg.MouseEvent.ButtonState == ButtonState_Pressed {
+		mc.mbdp.RegisterPressPosition(msg.MouseEvent.ButtonType, msg.MouseEvent.CursorX, msg.MouseEvent.CursorY)
+	}
+	if msg.MouseEvent.ButtonState == ButtonState_Released {
+		pressPos := mc.mbdp.GetPressPosition(msg.MouseEvent.ButtonType)
+		if (pressPos != nil) && (pressPos.X == msg.MouseEvent.CursorX) && (pressPos.Y == msg.MouseEvent.CursorY) {
+			//TODO
+			cio.PrintMessage("Mouse Click, buttonType:", msg.MouseEvent.ButtonType)
+		}
+		mc.mbdp.UnRegisterPressPosition(msg.MouseEvent.ButtonType)
+	}
+
+	cio.PrintMessage(msg.MouseEvent)
 }
 func (mc *MainController) ReceiveMessage(msg *MainControllerMessage) (err error) {
 	if !mc.sc.IsRunning() {

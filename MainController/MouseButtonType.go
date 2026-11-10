@@ -13,5 +13,5 @@ const (
 	MouseButtonType_X2        MouseButtonType = 7
 	MouseButtonType_Unknown   MouseButtonType = 8
 
-	MouseButtonTypeMax MouseButtonType = MouseButtonType_Unknown
+	MouseButtonTypeMax = MouseButtonType_Unknown
 )
