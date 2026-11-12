@@ -11,33 +11,38 @@ import (
 	mc "github.com/vault-thirteen/Direct2D/MainController"
 	p "github.com/vault-thirteen/Direct2D/Printer"
 	c "github.com/vault-thirteen/Direct2D/common"
-	w32 "github.com/vault-thirteen/Direct2D/os/win32"
 	"github.com/vault-thirteen/auxie/cio"
 	"github.com/vault-thirteen/auxie/errors"
+	"github.com/vault-thirteen/auxie/os/win32"
+	b "github.com/vault-thirteen/auxie/os/win32/base"
+	col "github.com/vault-thirteen/auxie/os/win32/class/D2D1/ColorF/enum"
+	e "github.com/vault-thirteen/auxie/os/win32/enum"
+	i "github.com/vault-thirteen/auxie/os/win32/interface"
+	t "github.com/vault-thirteen/auxie/os/win32/type"
 	"golang.org/x/sys/windows"
 )
 
 type App struct {
 	settings                   *as.AppSettings
-	instance                   windows.Handle
+	instance                   b.HINSTANCE
 	printer                    *p.Printer[any]
 	mc                         *mc.MainController
 	images                     []*img.Image
-	hwnd                       w32.HWND
-	width                      w32.UINT32
-	height                     w32.UINT32
-	direct2DFactory            *w32.ID2D1Factory
-	windowClassName            w32.LPCWSTR
-	pIWICFactory               *w32.IWICImagingFactory
-	renderTargetProperties     *w32.D2D1_RENDER_TARGET_PROPERTIES
-	hwndRenderTargetProperties *w32.D2D1_HWND_RENDER_TARGET_PROPERTIES
-	renderTarget               *w32.ID2D1HwndRenderTarget
-	bitmapProperties           *w32.D2D1_BITMAP_PROPERTIES
-	bitmapSize                 w32.D2D1_SIZE_U
-	bitmap                     *w32.ID2D1Bitmap
+	hwnd                       b.HWND
+	width                      b.UINT32
+	height                     b.UINT32
+	direct2DFactory            *i.ID2D1Factory
+	windowClassName            b.LPCWSTR
+	pIWICFactory               *i.IWICImagingFactory
+	renderTargetProperties     *t.D2D1_RENDER_TARGET_PROPERTIES
+	hwndRenderTargetProperties *t.D2D1_HWND_RENDER_TARGET_PROPERTIES
+	renderTarget               *i.ID2D1HwndRenderTarget
+	bitmapProperties           *t.D2D1_BITMAP_PROPERTIES
+	bitmapSize                 t.D2D1_SIZE_U
+	bitmap                     *i.ID2D1Bitmap
 }
 
-func NewApp(settings *as.AppSettings, instance windows.Handle) (app *App, err error) {
+func NewApp(settings *as.AppSettings, instance b.HINSTANCE) (app *App, err error) {
 	app = &App{
 		settings: settings,
 		instance: instance,
@@ -147,18 +152,18 @@ func (app *App) Run() (err error) {
 
 	// 5. Create the Direct2D factory.
 	{
-		var factoryOptions w32.D2D1_FACTORY_OPTIONS
+		var factoryOptions t.D2D1_FACTORY_OPTIONS
 		if app.settings.Debug.IsEnabled {
 			if app.settings.Debug.UseDirect2dDebug {
-				factoryOptions = w32.D2D1_FACTORY_OPTIONS{DebugLevel: w32.D2D1_DEBUG_LEVEL_INFORMATION}
+				factoryOptions = t.D2D1_FACTORY_OPTIONS{DebugLevel: e.D2D1_DEBUG_LEVEL_INFORMATION}
 			} else {
-				factoryOptions = w32.D2D1_FACTORY_OPTIONS{DebugLevel: w32.D2D1_DEBUG_LEVEL_NONE}
+				factoryOptions = t.D2D1_FACTORY_OPTIONS{DebugLevel: e.D2D1_DEBUG_LEVEL_NONE}
 			}
 		}
 
-		var hr w32.HRESULT
-		hr = w32.D2D1CreateFactory(w32.D2D1_FACTORY_TYPE_MULTI_THREADED, &w32.IID_ID2D1Factory, &factoryOptions, &app.direct2DFactory)
-		if hr != w32.S_OK {
+		var hr b.HRESULT
+		hr = win32.D2D1CreateFactory(e.D2D1_FACTORY_TYPE_MULTI_THREADED, &b.IID_ID2D1Factory, &factoryOptions, &app.direct2DFactory)
+		if hr != b.S_OK {
 			return hr
 		}
 
@@ -172,10 +177,10 @@ func (app *App) Run() (err error) {
 	}
 
 	// 6. Register the window class.
-	var wc w32.WNDCLASSEXW
+	var wc t.WNDCLASSEXW
 	{
-		var cursor w32.HCURSOR
-		cursor, err = w32.LoadCursorW(0, w32.IDC_ARROW)
+		var cursor b.HCURSOR
+		cursor, err = win32.LoadCursorW(0, b.IDC_ARROW)
 		if err != nil {
 			return err
 		}
@@ -185,28 +190,28 @@ func (app *App) Run() (err error) {
 			return err
 		}
 
-		wc = w32.WNDCLASSEXW{
+		wc = t.WNDCLASSEXW{
 			Size:       uint32(unsafe.Sizeof(wc)),
-			Style:      w32.CS_HREDRAW | w32.CS_VREDRAW,
+			Style:      b.CS_HREDRAW | b.CS_VREDRAW,
 			WndProc:    app.wndProc,
 			ClsExtra:   0,
 			WndExtra:   int32(unsafe.Sizeof(uintptr(0))),
 			Instance:   app.instance,
 			Icon:       0,
 			Cursor:     cursor,
-			Background: windows.Handle(w32.COLOR_WINDOWFRAME),
+			Background: windows.Handle(b.COLOR_WINDOWFRAME),
 			ClassName:  app.windowClassName,
 		}
-		wcg := w32.WNDCLASSEXW_ForGolang(wc)
+		wcg := t.WNDCLASSEXW_ForGolang(wc)
 
-		_, err = w32.RegisterClassExW(&wcg)
+		_, err = win32.RegisterClassExW(&wcg)
 		if err != nil {
 			return err
 		}
 
 		defer func() {
 			if needRollBack {
-				_, derr := w32.UnregisterClassW(app.windowClassName, app.instance)
+				_, derr := win32.UnregisterClassW(app.windowClassName, app.instance)
 				err = errors.Combine(err, derr)
 			}
 		}()
@@ -214,19 +219,19 @@ func (app *App) Run() (err error) {
 
 	// 7. Create a window.
 	{
-		var windowName w32.LPCWSTR
+		var windowName b.LPCWSTR
 		windowName, err = syscall.UTF16PtrFromString(app.settings.Window.Name)
 		if err != nil {
 			return err
 		}
 
-		app.hwnd, err = w32.CreateWindowExW(
+		app.hwnd, err = win32.CreateWindowExW(
 			0,
 			wc.ClassName,
 			windowName,
-			w32.WS_OVERLAPPEDWINDOW|w32.WS_VISIBLE,
-			w32.CW_USEDEFAULT,
-			w32.CW_USEDEFAULT,
+			b.WS_OVERLAPPEDWINDOW|b.WS_VISIBLE,
+			b.CW_USEDEFAULT,
+			b.CW_USEDEFAULT,
 			int32(app.settings.Window.Size.Width),
 			int32(app.settings.Window.Size.Height),
 			0,
@@ -240,7 +245,7 @@ func (app *App) Run() (err error) {
 
 		defer func() {
 			if needRollBack {
-				_, derr := w32.DestroyWindow(app.hwnd)
+				_, derr := win32.DestroyWindow(app.hwnd)
 				err = errors.Combine(err, derr)
 			}
 		}()
@@ -248,11 +253,11 @@ func (app *App) Run() (err error) {
 
 	// 8. Show the window.
 	{
-		w32.ShowWindow(app.hwnd, windows.SW_SHOWNORMAL)
+		win32.ShowWindow(app.hwnd, windows.SW_SHOWNORMAL)
 
-		var b w32.BOOL
-		b = w32.UpdateWindow(app.hwnd)
-		if b == 0 {
+		var ret b.BOOL
+		ret = win32.UpdateWindow(app.hwnd)
+		if ret == 0 {
 			return c.FunctionFailure("UpdateWindow")
 		}
 	}
@@ -260,12 +265,12 @@ func (app *App) Run() (err error) {
 	// 9. Initialise the Windows Imaging Component (WIC).
 	{
 		app.pIWICFactory = nil
-		var hr w32.HRESULT
-		hr = w32.CoCreateInstance(
-			&w32.CLSID_WICImagingFactory1, // TODO: 0,1,2 ???
+		var hr b.HRESULT
+		hr = win32.CoCreateInstance(
+			&i.CLSID_WICImagingFactory1, // TODO: 0,1,2 ???
 			nil,
-			w32.DWORD(w32.CLSCTX_INPROC_SERVER),
-			&(w32.IID_IWICImagingFactory),
+			b.DWORD(e.CLSCTX_INPROC_SERVER),
+			&(i.IID_IWICImagingFactory),
 			(*unsafe.Pointer)(unsafe.Pointer(&app.pIWICFactory)),
 		)
 		if hr.FAILED() {
@@ -298,23 +303,23 @@ func (app *App) readOsMessages() (err error) {
 		app.printMessage(c.Msg_MessageReaderStop)
 	}()
 
-	var msg w32.MSG
-	var b w32.BOOL
+	var msg t.MSG
+	var ret b.BOOL
 
 	for {
-		b, err = w32.GetMessageW(&msg, 0, 0, 0)
+		ret, err = win32.GetMessageW(&msg, 0, 0, 0)
 		if err != nil {
 			return err
 		}
 
 		// Windows O.S. documentation suggests that we should stop reading O.S.
 		// messages when 'GetMessage' function returns zero.
-		if b == 0 {
+		if ret == 0 {
 			break
 		}
 
-		_ = w32.TranslateMessage(&msg)
-		_ = w32.DispatchMessageW(&msg)
+		_ = win32.TranslateMessage(&msg)
+		_ = win32.DispatchMessageW(&msg)
 	}
 
 	return nil
@@ -326,11 +331,11 @@ func (app *App) printMessage(message any) {
 	}
 }
 func (app *App) peekMessage() (isMessageAvailable bool) {
-	var msg w32.MSG
-	var b = w32.PeekMessageW(&msg, 0, 0, 0, w32.PM_NOREMOVE)
-	return b != 0
+	var msg t.MSG
+	var ret = win32.PeekMessageW(&msg, 0, 0, 0, b.PM_NOREMOVE)
+	return ret != 0
 }
-func (app *App) wndProc(hwnd w32.HWND, message w32.WM, wParam w32.WPARAM, lParam w32.LPARAM) w32.LRESULT {
+func (app *App) wndProc(hwnd b.HWND, message e.WM, wParam b.WPARAM, lParam b.LPARAM) b.LRESULT {
 	if app.settings.Debug.IsEnabled {
 		if app.settings.Debug.ShowOsMessages {
 			txt := cio.FormatMessage("OS Message [%v] wParam:%+v lParam:%+v", message, wParam, lParam)
@@ -339,16 +344,16 @@ func (app *App) wndProc(hwnd w32.HWND, message w32.WM, wParam w32.WPARAM, lParam
 	}
 
 	// WM_CREATE message can return '-1' error.
-	if message == w32.WM_CREATE {
+	if message == e.WM_CREATE {
 		if app.settings.Debug.IsEnabled {
 			app.printMessage(c.Msg_WM_CREATE)
 		}
 
-		pcs := (*w32.CREATESTRUCT)(unsafe.Pointer(lParam))
+		pcs := (*t.CREATESTRUCT)(unsafe.Pointer(lParam))
 		pApp := (*App)(pcs.LpCreateParams)
 
-		w32.SetLastError(0)
-		pv := w32.SetWindowLongPtrW(hwnd, w32.GWLP_USERDATA, uintptr(unsafe.Pointer(pApp)))
+		win32.SetLastError(0)
+		pv := win32.SetWindowLongPtrW(hwnd, b.GWLP_USERDATA, uintptr(unsafe.Pointer(pApp)))
 		if pv == 0 {
 			err := windows.GetLastError()
 			if err != nil {
@@ -360,22 +365,22 @@ func (app *App) wndProc(hwnd w32.HWND, message w32.WM, wParam w32.WPARAM, lParam
 		return 0
 	}
 
-	x, err := w32.GetWindowLongPtrW(hwnd, w32.GWLP_USERDATA)
+	x, err := win32.GetWindowLongPtrW(hwnd, b.GWLP_USERDATA)
 	if err != nil {
 		app.printMessage(err)
-		return w32.DefWindowProcW(hwnd, message, wParam, lParam)
+		return win32.DefWindowProcW(hwnd, message, wParam, lParam)
 	}
 
 	pApp := (*App)(unsafe.Pointer(x))
 	if pApp == nil {
 		err = errors.ErrorFromText(c.Err_NullPointer)
 		app.printMessage(err)
-		return w32.DefWindowProcW(hwnd, message, wParam, lParam)
+		return win32.DefWindowProcW(hwnd, message, wParam, lParam)
 	}
 
 	switch message {
 
-	case w32.WM_PAINT:
+	case e.WM_PAINT:
 		{
 			if app.settings.Debug.IsEnabled {
 				app.printMessage(c.Msg_WM_PAINT)
@@ -387,9 +392,9 @@ func (app *App) wndProc(hwnd w32.HWND, message w32.WM, wParam w32.WPARAM, lParam
 				return 0
 			}
 
-			var b w32.BOOL
-			b = w32.ValidateRect(app.hwnd, nil)
-			if b == 0 {
+			var ret b.BOOL
+			ret = win32.ValidateRect(app.hwnd, nil)
+			if ret == 0 {
 				err = c.FunctionFailure("ValidateRect")
 				app.printMessage(err)
 				return 0
@@ -398,7 +403,7 @@ func (app *App) wndProc(hwnd w32.HWND, message w32.WM, wParam w32.WPARAM, lParam
 			return 0
 		}
 
-	case w32.WM_MOUSEMOVE:
+	case e.WM_MOUSEMOVE:
 		{
 			mx := int(int16(lParam & 0xffff))
 			my := int(int16((lParam >> 16) & 0xffff))
@@ -426,7 +431,7 @@ func (app *App) wndProc(hwnd w32.HWND, message w32.WM, wParam w32.WPARAM, lParam
 			return 0
 		}
 
-	case w32.WM_LBUTTONDOWN:
+	case e.WM_LBUTTONDOWN:
 		{
 			mx := int(int16(lParam & 0xffff))
 			my := int(int16((lParam >> 16) & 0xffff))
@@ -454,7 +459,7 @@ func (app *App) wndProc(hwnd w32.HWND, message w32.WM, wParam w32.WPARAM, lParam
 			return 0
 		}
 
-	case w32.WM_LBUTTONUP:
+	case e.WM_LBUTTONUP:
 		{
 			mx := int(int16(lParam & 0xffff))
 			my := int(int16((lParam >> 16) & 0xffff))
@@ -482,7 +487,7 @@ func (app *App) wndProc(hwnd w32.HWND, message w32.WM, wParam w32.WPARAM, lParam
 			return 0
 		}
 
-	case w32.WM_RBUTTONDOWN:
+	case e.WM_RBUTTONDOWN:
 		{
 			mx := int(int16(lParam & 0xffff))
 			my := int(int16((lParam >> 16) & 0xffff))
@@ -510,7 +515,7 @@ func (app *App) wndProc(hwnd w32.HWND, message w32.WM, wParam w32.WPARAM, lParam
 			return 0
 		}
 
-	case w32.WM_RBUTTONUP:
+	case e.WM_RBUTTONUP:
 		{
 			mx := int(int16(lParam & 0xffff))
 			my := int(int16((lParam >> 16) & 0xffff))
@@ -538,7 +543,7 @@ func (app *App) wndProc(hwnd w32.HWND, message w32.WM, wParam w32.WPARAM, lParam
 			return 0
 		}
 
-	case w32.WM_MBUTTONDOWN:
+	case e.WM_MBUTTONDOWN:
 		{
 			mx := int(int16(lParam & 0xffff))
 			my := int(int16((lParam >> 16) & 0xffff))
@@ -566,7 +571,7 @@ func (app *App) wndProc(hwnd w32.HWND, message w32.WM, wParam w32.WPARAM, lParam
 			return 0
 		}
 
-	case w32.WM_MBUTTONUP:
+	case e.WM_MBUTTONUP:
 		{
 			mx := int(int16(lParam & 0xffff))
 			my := int(int16((lParam >> 16) & 0xffff))
@@ -594,10 +599,10 @@ func (app *App) wndProc(hwnd w32.HWND, message w32.WM, wParam w32.WPARAM, lParam
 			return 0
 		}
 
-	case w32.WM_KEYDOWN:
+	case e.WM_KEYDOWN:
 		{
 			keyCode := cio.KeyCode(wParam)
-			isRepeated := (lParam & w32.RepeatedKeyMarker) != 0
+			isRepeated := (lParam & b.RepeatedKeyMarker) != 0
 			if isRepeated {
 				return 0
 			}
@@ -632,10 +637,10 @@ func (app *App) wndProc(hwnd w32.HWND, message w32.WM, wParam w32.WPARAM, lParam
 			return 0
 		}
 
-	case w32.WM_SYSKEYDOWN:
+	case e.WM_SYSKEYDOWN:
 		{
 			keyCode := cio.KeyCode(wParam)
-			isRepeated := (lParam & w32.RepeatedKeyMarker) != 0
+			isRepeated := (lParam & b.RepeatedKeyMarker) != 0
 			if isRepeated {
 				return 0
 			}
@@ -670,7 +675,7 @@ func (app *App) wndProc(hwnd w32.HWND, message w32.WM, wParam w32.WPARAM, lParam
 			return 0
 		}
 
-	case w32.WM_KEYUP:
+	case e.WM_KEYUP:
 		{
 			keyCode := cio.KeyCode(wParam)
 
@@ -704,7 +709,7 @@ func (app *App) wndProc(hwnd w32.HWND, message w32.WM, wParam w32.WPARAM, lParam
 			return 0
 		}
 
-	case w32.WM_SYSKEYUP:
+	case e.WM_SYSKEYUP:
 		{
 			keyCode := cio.KeyCode(wParam)
 
@@ -738,7 +743,7 @@ func (app *App) wndProc(hwnd w32.HWND, message w32.WM, wParam w32.WPARAM, lParam
 			return 0
 		}
 
-	case w32.WM_MOUSEWHEEL:
+	case e.WM_MOUSEWHEEL:
 		{
 			mx := int(int16(lParam & 0xffff))
 			my := int(int16((lParam >> 16) & 0xffff))
@@ -774,7 +779,7 @@ func (app *App) wndProc(hwnd w32.HWND, message w32.WM, wParam w32.WPARAM, lParam
 			return 0
 		}
 
-	case w32.WM_XBUTTONDOWN:
+	case e.WM_XBUTTONDOWN:
 		{
 			mx := int(int16(lParam & 0xffff))
 			my := int(int16((lParam >> 16) & 0xffff))
@@ -782,9 +787,9 @@ func (app *App) wndProc(hwnd w32.HWND, message w32.WM, wParam w32.WPARAM, lParam
 			xButton := uint16(wParam >> 16)
 			var btnType mc.MouseButtonType
 			switch xButton {
-			case w32.XBUTTON1:
+			case b.XBUTTON1:
 				btnType = mc.MouseButtonType_X1
-			case w32.XBUTTON2:
+			case b.XBUTTON2:
 				btnType = mc.MouseButtonType_X2
 			default:
 				err = errors.ErrorFromText(c.Err_UnknownType)
@@ -815,7 +820,7 @@ func (app *App) wndProc(hwnd w32.HWND, message w32.WM, wParam w32.WPARAM, lParam
 			return 0
 		}
 
-	case w32.WM_XBUTTONUP:
+	case e.WM_XBUTTONUP:
 		{
 			mx := int(int16(lParam & 0xffff))
 			my := int(int16((lParam >> 16) & 0xffff))
@@ -823,9 +828,9 @@ func (app *App) wndProc(hwnd w32.HWND, message w32.WM, wParam w32.WPARAM, lParam
 			xButton := uint16(wParam >> 16)
 			var btnType mc.MouseButtonType
 			switch xButton {
-			case w32.XBUTTON1:
+			case b.XBUTTON1:
 				btnType = mc.MouseButtonType_X1
-			case w32.XBUTTON2:
+			case b.XBUTTON2:
 				btnType = mc.MouseButtonType_X2
 			default:
 				err = errors.ErrorFromText(c.Err_UnknownType)
@@ -857,14 +862,14 @@ func (app *App) wndProc(hwnd w32.HWND, message w32.WM, wParam w32.WPARAM, lParam
 		}
 
 	// WM_SIZE message can not return errors.
-	case w32.WM_SIZE:
+	case e.WM_SIZE:
 		{
 			if app.settings.Debug.IsEnabled {
 				app.printMessage(c.Msg_WM_SIZE)
 			}
 
-			app.width = w32.UINT(w32.LOWORD(lParam))
-			app.height = w32.UINT(w32.HIWORD(lParam))
+			app.width = b.UINT(b.LOWORD(uintptr(lParam)))
+			app.height = b.UINT(b.HIWORD(uintptr(lParam)))
 
 			if (app.width <= 0) || (app.height <= 0) {
 				err = errors.ErrorFromFormattedText(c.Errf_InvalidSizeRequest, app.width, app.height)
@@ -878,9 +883,9 @@ func (app *App) wndProc(hwnd w32.HWND, message w32.WM, wParam w32.WPARAM, lParam
 				return 0
 			}
 
-			var b w32.BOOL
-			b = w32.InvalidateRect(app.hwnd, nil, 1)
-			if b == 0 {
+			var ret b.BOOL
+			ret = win32.InvalidateRect(app.hwnd, nil, 1)
+			if ret == 0 {
 				err = c.FunctionFailure("InvalidateRect")
 				app.printMessage(err)
 				return 0
@@ -889,7 +894,7 @@ func (app *App) wndProc(hwnd w32.HWND, message w32.WM, wParam w32.WPARAM, lParam
 			return 0
 		}
 
-	case w32.WM_CLOSE:
+	case e.WM_CLOSE:
 		{
 			if app.settings.Debug.IsEnabled {
 				app.printMessage(c.Msg_WM_CLOSE)
@@ -909,11 +914,11 @@ func (app *App) wndProc(hwnd w32.HWND, message w32.WM, wParam w32.WPARAM, lParam
 			}
 
 			//ShowWindow(hwnd, windows.SW_HIDE)
-			w32.PostQuitMessage(0) // Send WM_QUIT message to itself.
+			win32.PostQuitMessage(0) // Send WM_QUIT message to itself.
 			return 0
 		}
 
-	case w32.WM_DESTROY:
+	case e.WM_DESTROY:
 		{
 			if app.settings.Debug.IsEnabled {
 				app.printMessage(c.Msg_WM_DESTROY)
@@ -922,7 +927,7 @@ func (app *App) wndProc(hwnd w32.HWND, message w32.WM, wParam w32.WPARAM, lParam
 			return 0
 		}
 
-	case w32.WM_NCDESTROY:
+	case e.WM_NCDESTROY:
 		{
 			if app.settings.Debug.IsEnabled {
 				app.printMessage(c.Msg_WM_NCDESTROY)
@@ -932,20 +937,20 @@ func (app *App) wndProc(hwnd w32.HWND, message w32.WM, wParam w32.WPARAM, lParam
 		}
 	}
 
-	return w32.DefWindowProcW(hwnd, message, wParam, lParam)
+	return win32.DefWindowProcW(hwnd, message, wParam, lParam)
 }
-func (app *App) onResize(wParam w32.WPARAM) (err error) {
+func (app *App) onResize(wParam b.WPARAM) (err error) {
 	if app.settings.Debug.IsEnabled {
 		switch wParam {
-		case w32.SIZE_RESTORED:
+		case b.SIZE_RESTORED:
 			app.printMessage("SIZE_RESTORED")
-		case w32.SIZE_MINIMIZED:
+		case b.SIZE_MINIMIZED:
 			app.printMessage("SIZE_MINIMIZED")
-		case w32.SIZE_MAXIMIZED:
+		case b.SIZE_MAXIMIZED:
 			app.printMessage("SIZE_MAXIMIZED")
-		case w32.SIZE_MAXSHOW:
+		case b.SIZE_MAXSHOW:
 			app.printMessage("SIZE_MAXSHOW")
-		case w32.SIZE_MAXHIDE:
+		case b.SIZE_MAXHIDE:
 			app.printMessage("SIZE_MAXHIDE")
 		}
 	}
@@ -954,9 +959,9 @@ func (app *App) onResize(wParam w32.WPARAM) (err error) {
 		return nil
 	}
 
-	size := w32.D2D1_SizeU(app.width, app.height)
+	size := t.D2D1_SizeU(app.width, app.height)
 
-	var mbs w32.UINT32 = app.renderTarget.GetMaximumBitmapSize()
+	var mbs b.UINT32 = app.renderTarget.GetMaximumBitmapSize()
 	if size.Width > mbs {
 		return errors.ErrorFromFormattedText(c.Errf_SizeExceedsMaximumSize, size.Width, mbs)
 	}
@@ -964,10 +969,10 @@ func (app *App) onResize(wParam w32.WPARAM) (err error) {
 		return errors.ErrorFromFormattedText(c.Errf_SizeExceedsMaximumSize, size.Height, mbs)
 	}
 
-	var hr w32.HRESULT
+	var hr b.HRESULT
 	hr, err = app.renderTarget.Resize(&size)
 	if err != nil {
-		if hr == w32.D2DERR_RECREATE_TARGET {
+		if hr == b.D2DERR_RECREATE_TARGET {
 			app.discardDeviceResources()
 		}
 		return err
@@ -988,7 +993,7 @@ func (app *App) onRender() (err error) {
 		return err
 	}
 
-	var hr w32.HRESULT
+	var hr b.HRESULT
 	// ID2D1HwndRenderTarget::CheckWindowState method (d2d1.h)
 	// https://learn.microsoft.com/en-gb/windows/win32/api/d2d1/nf-d2d1-id2d1hwndrendertarget-checkwindowstate
 	/*
@@ -1008,30 +1013,30 @@ func (app *App) onRender() (err error) {
 	// If window state can only be 0 or 1, then why do I receive value 2291728413 ?????
 	// Microsoft will not tell you. Microsoft Direct2D API must burn in hell.
 	var windowsState = app.renderTarget.CheckWindowState()
-	if windowsState != w32.D2D1_WINDOW_STATE_NONE {
-		if windowsState == w32.D2D1_WINDOW_STATE_OCCLUDED {
+	if windowsState != e.D2D1_WINDOW_STATE_NONE {
+		if windowsState == e.D2D1_WINDOW_STATE_OCCLUDED {
 			// Do not render an occluded window.
 			return nil
 		}
-		hr = w32.HRESULT(windowsState)
+		hr = b.HRESULT(windowsState)
 		return hr
 	}
 
 	app.renderTarget.BeginDraw()
-	var identityMatrix = w32.D2D_Matrix3x2F_Identity()
+	var identityMatrix = t.D2D_Matrix3x2F_Identity()
 	app.renderTarget.SetTransform(&identityMatrix)
-	var color = w32.D2D1_ColorF(w32.D2D1_ColorF_Gray)
+	var color = t.NewColorF_2B(col.Gray)
 	app.renderTarget.Clear(&color)
 
 	if app.bitmap != nil {
-		var size w32.D2D1_SIZE_F = app.bitmap.GetSize()
-		var destinationRect = w32.D2D1_RectF(0.0, 0.0, size.Width, size.Height)
-		app.renderTarget.DrawBitmap(app.bitmap, &destinationRect, w32.FLOAT(1.0), w32.D2D1_BITMAP_INTERPOLATION_MODE_LINEAR, nil)
+		var size t.D2D1_SIZE_F = app.bitmap.GetSize()
+		var destinationRect = t.D2D1_RectF(0.0, 0.0, size.Width, size.Height)
+		app.renderTarget.DrawBitmap(app.bitmap, &destinationRect, b.FLOAT(1.0), e.D2D1_BITMAP_INTERPOLATION_MODE_LINEAR, nil)
 	}
 
 	hr, err = app.renderTarget.EndDraw()
 	if err != nil {
-		if hr == w32.D2DERR_RECREATE_TARGET {
+		if hr == b.D2DERR_RECREATE_TARGET {
 			app.discardDeviceResources()
 		}
 		return err
@@ -1064,27 +1069,27 @@ func (app *App) createRenderTarget() (err error) {
 		return nil
 	}
 
-	var rect w32.RECT
-	_, err = w32.GetClientRect(app.hwnd, &rect)
+	var rect t.RECT
+	_, err = win32.GetClientRect(app.hwnd, &rect)
 	if err != nil {
 		return err
 	}
 
-	var size = w32.D2D1_SizeU(uint32(rect.Right-rect.Left), uint32(rect.Bottom-rect.Top))
+	var size = t.D2D1_SizeU(uint32(rect.Right-rect.Left), uint32(rect.Bottom-rect.Top))
 
-	var renderTargetProperties = w32.RenderTargetProperties()
+	var renderTargetProperties = t.RenderTargetProperties()
 	if app.settings.UseHardwareRendering {
-		renderTargetProperties.Type = w32.D2D1_RENDER_TARGET_TYPE_HARDWARE
+		renderTargetProperties.Type = e.D2D1_RENDER_TARGET_TYPE_HARDWARE
 	} else {
-		renderTargetProperties.Type = w32.D2D1_RENDER_TARGET_TYPE_SOFTWARE
+		renderTargetProperties.Type = e.D2D1_RENDER_TARGET_TYPE_SOFTWARE
 	}
-	renderTargetProperties.PixelFormat = w32.D2D1_PIXEL_FORMAT{
+	renderTargetProperties.PixelFormat = t.D2D1_PIXEL_FORMAT{
 		Format:    app.settings.RenderTargetFormat.PixelFormat,
 		AlphaMode: app.settings.RenderTargetFormat.AlphaMode,
 	}
 	app.renderTargetProperties = &renderTargetProperties
 
-	var hwndRenderTargetProperties = w32.HwndRenderTargetProperties(app.hwnd, size, w32.D2D1_PRESENT_OPTIONS_NONE)
+	var hwndRenderTargetProperties = t.HwndRenderTargetProperties(app.hwnd, size, e.D2D1_PRESENT_OPTIONS_NONE)
 	app.hwndRenderTargetProperties = &hwndRenderTargetProperties
 
 	// List of formats supported by ID2D1HwndRenderTarget in Direct2D:
@@ -1131,7 +1136,7 @@ func (app *App) loadBitmap() (err error) {
 	// model has chances to be used. Unfortunately, Microsoft corporation does
 	// not support alternative technologies and standards.
 	var expectedPixelFormat = app.settings.BitmapFormat.PixelFormat
-	if expectedPixelFormat != w32.DXGI_FORMAT_B8G8R8A8_UNORM {
+	if expectedPixelFormat != e.DXGI_FORMAT_B8G8R8A8_UNORM {
 		return errors.ErrorFromText(c.Err_UnsupportedPixelFormat)
 	}
 
@@ -1142,23 +1147,23 @@ func (app *App) loadBitmap() (err error) {
 		return err
 	}
 
-	app.bitmapSize = w32.D2D1_SIZE_U{
-		Width:  w32.UINT32(image.Size.Width),
-		Height: w32.UINT32(image.Size.Height),
+	app.bitmapSize = t.D2D1_SIZE_U{
+		Width:  b.UINT32(image.Size.Width),
+		Height: b.UINT32(image.Size.Height),
 	}
 
 	// While we do not support YCbCr format, we process only RGBA images.
 	var lineStride int
 	lineStride, _, _ = image.LineStride()
-	var pitch = w32.UINT32(lineStride)
+	var pitch = b.UINT32(lineStride)
 
-	var bitmapProperties = w32.D2D1_BITMAP_PROPERTIES{
-		PixelFormat: w32.D2D1_PIXEL_FORMAT{
+	var bitmapProperties = t.D2D1_BITMAP_PROPERTIES{
+		PixelFormat: t.D2D1_PIXEL_FORMAT{
 			Format:    expectedPixelFormat,
 			AlphaMode: image.AlphaChannelMode,
 		},
-		DpiX: w32.DefaultDpiX,
-		DpiY: w32.DefaultDpiY,
+		DpiX: b.DefaultDpiX,
+		DpiY: b.DefaultDpiY,
 	}
 	app.bitmapProperties = &bitmapProperties
 
@@ -1189,8 +1194,8 @@ func (app *App) unloadBitmap() {
 	app.bitmap = nil
 }
 func (app *App) selfCheck() (err error) {
-	var b byte = 0xFF
-	if unsafe.Sizeof(b) != 1 {
+	var x byte = 0xFF
+	if unsafe.Sizeof(x) != 1 {
 		return errors.ErrorFromText(c.Err_UnsupportedArchitecture)
 	}
 

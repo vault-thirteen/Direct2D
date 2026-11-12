@@ -1,8 +1,10 @@
 package as
 
-import w32 "github.com/vault-thirteen/Direct2D/os/win32"
+import (
+	e "github.com/vault-thirteen/auxie/os/win32/enum"
+)
 
 type AppBitmapFormatSettings struct {
-	PixelFormat w32.DXGI_FORMAT
-	AlphaMode   w32.D2D1_ALPHA_MODE
+	PixelFormat e.DXGI_FORMAT
+	AlphaMode   e.D2D1_ALPHA_MODE
 }

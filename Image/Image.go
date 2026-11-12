@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	w32 "github.com/vault-thirteen/Direct2D/os/win32"
+	e "github.com/vault-thirteen/auxie/os/win32/enum"
 	_ "golang.org/x/image/bmp"
 	_ "golang.org/x/image/tiff"
 
@@ -30,7 +30,7 @@ type Image struct {
 	FormatName       string
 	ColourModel      color.Model
 	ColourModelType  ColourModelType
-	AlphaChannelMode w32.D2D1_ALPHA_MODE
+	AlphaChannelMode e.D2D1_ALPHA_MODE
 	src              *image.Image
 }
 
@@ -73,14 +73,14 @@ func NewImageFromFile(filePath string, useStraightAlphaChannel bool) (i *Image, 
 		FormatName:       formatName,
 		ColourModel:      x.ColorModel(),
 		ColourModelType:  getColourModelType(x.ColorModel()),
-		AlphaChannelMode: w32.D2D1_ALPHA_MODE_UNKNOWN,
+		AlphaChannelMode: e.D2D1_ALPHA_MODE_UNKNOWN,
 		src:              &x,
 	}
 
 	if useStraightAlphaChannel {
-		i.AlphaChannelMode = w32.D2D1_ALPHA_MODE_STRAIGHT
+		i.AlphaChannelMode = e.D2D1_ALPHA_MODE_STRAIGHT
 	} else {
-		i.AlphaChannelMode = w32.D2D1_ALPHA_MODE_PREMULTIPLIED
+		i.AlphaChannelMode = e.D2D1_ALPHA_MODE_PREMULTIPLIED
 	}
 
 	return i, nil

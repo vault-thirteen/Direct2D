@@ -1,6 +1,5 @@
 package c
 
-type Position struct {
-	X int
-	Y int
-}
+import c "github.com/vault-thirteen/auxie/os/win32/common"
+
+type Position = c.Point[int]

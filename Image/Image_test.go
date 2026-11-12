@@ -1,7 +1,7 @@
 package img
 
 import (
-	w32 "github.com/vault-thirteen/Direct2D/os/win32"
+	e "github.com/vault-thirteen/auxie/os/win32/enum"
 	"github.com/vault-thirteen/auxie/tester"
 
 	"testing"
@@ -17,7 +17,7 @@ func Test_NewImageFromFile(t *testing.T) {
 	aTest.MustBeEqual(image.Size, ImageSize{Width: 900, Height: 506})
 	aTest.MustBeEqual(image.FormatName, "jpeg")
 	aTest.MustBeEqual(image.ColourModelType, ColourModelType_NRGBA)
-	aTest.MustBeEqual(image.AlphaChannelMode, w32.D2D1_ALPHA_MODE_STRAIGHT)
+	aTest.MustBeEqual(image.AlphaChannelMode, e.D2D1_ALPHA_MODE_STRAIGHT)
 	aTest.MustBeEqual(image.PixelDataSize(), 900*506*4)
 
 	var lineStride int

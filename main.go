@@ -6,7 +6,8 @@ import (
 	a "github.com/vault-thirteen/Direct2D/App"
 	as "github.com/vault-thirteen/Direct2D/AppSettings"
 	c "github.com/vault-thirteen/Direct2D/common"
-	w32 "github.com/vault-thirteen/Direct2D/os/win32"
+	b "github.com/vault-thirteen/auxie/os/win32/base"
+	e "github.com/vault-thirteen/auxie/os/win32/enum"
 	"golang.org/x/sys/windows"
 )
 
@@ -38,12 +39,12 @@ func main() {
 		UseHardwareRendering:                     false,
 		UseStraightAlphaChannelForImportedImages: false,
 		RenderTargetFormat: as.AppRenderTargetFormatSettings{
-			PixelFormat: w32.DXGI_FORMAT_B8G8R8A8_UNORM,
-			AlphaMode:   w32.D2D1_ALPHA_MODE_PREMULTIPLIED,
+			PixelFormat: e.DXGI_FORMAT_B8G8R8A8_UNORM,
+			AlphaMode:   e.D2D1_ALPHA_MODE_PREMULTIPLIED,
 		},
 		BitmapFormat: as.AppBitmapFormatSettings{
-			PixelFormat: w32.DXGI_FORMAT_B8G8R8A8_UNORM,
-			AlphaMode:   w32.D2D1_ALPHA_MODE_PREMULTIPLIED,
+			PixelFormat: e.DXGI_FORMAT_B8G8R8A8_UNORM,
+			AlphaMode:   e.D2D1_ALPHA_MODE_PREMULTIPLIED,
 		},
 	}
 
@@ -57,15 +58,16 @@ func main() {
 	err = app.Run()
 	mustBeNoError(err)
 }
-func getInstance() (instance windows.Handle, err error) {
+func getInstance() (instance b.HINSTANCE, err error) {
 	// Emulate hInstance for Windows API.
+	var hInstance windows.Handle
 	flags := uint32(windows.GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | windows.GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT)
-	err = windows.GetModuleHandleEx(flags, (*uint16)(unsafe.Pointer(&mm)), &instance)
+	err = windows.GetModuleHandleEx(flags, (*uint16)(unsafe.Pointer(&mm)), &hInstance)
 	if err != nil {
 		return 0, err
 	}
 
-	return instance, nil
+	return b.HINSTANCE(hInstance), nil
 }
 func mustBeNoError(err error) {
 	if err != nil {

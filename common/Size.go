@@ -1,6 +1,7 @@
 package c
 
-type Size struct {
-	Width  uint32
-	Height uint32
-}
+import (
+	"github.com/vault-thirteen/auxie/os/win32/common"
+)
+
+type Size c.Size[uint32]
