@@ -349,7 +349,7 @@ func (app *App) wndProc(hwnd b.HWND, message e.WM, wParam b.WPARAM, lParam b.LPA
 			app.printMessage(c.Msg_WM_CREATE)
 		}
 
-		pcs := (*t.CREATESTRUCT)(unsafe.Pointer(lParam))
+		pcs := (*t.CREATESTRUCT)(unsafe.Add(nil, lParam))
 		pApp := (*App)(pcs.LpCreateParams)
 
 		win32.SetLastError(0)
@@ -371,7 +371,7 @@ func (app *App) wndProc(hwnd b.HWND, message e.WM, wParam b.WPARAM, lParam b.LPA
 		return win32.DefWindowProcW(hwnd, message, wParam, lParam)
 	}
 
-	pApp := (*App)(unsafe.Pointer(x))
+	pApp := (*App)(unsafe.Add(nil, x))
 	if pApp == nil {
 		err = errors.ErrorFromText(c.Err_NullPointer)
 		app.printMessage(err)
