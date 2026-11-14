@@ -3,7 +3,7 @@ module github.com/vault-thirteen/Direct2D
 go 1.27.4
 
 require (
-	github.com/vault-thirteen/auxie v0.44.3
+	github.com/vault-thirteen/auxie v0.45.0
 	golang.org/x/image v0.48.0
 	golang.org/x/sys v0.50.0
 )
