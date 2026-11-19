@@ -1,6 +1,10 @@
 package mc
 
-import "github.com/vault-thirteen/auxie/errors"
+import (
+	c "github.com/vault-thirteen/Direct2D/common"
+	"github.com/vault-thirteen/auxie/errors"
+	b "github.com/vault-thirteen/auxie/os/win32/base"
+)
 
 const (
 	Errf_ErrorInField = "error in field: %s"
@@ -13,12 +17,16 @@ const (
 type MainControllerSettings struct {
 	isDebug            bool
 	messageChannelSize int
+	backChannel        *chan c.OsChanMsg
+	hDataEvent         b.HANDLE
 }
 
-func NewMainControllerSettings(messageChannelSize int, isDebug bool) (mcs *MainControllerSettings, err error) {
+func NewMainControllerSettings(isDebug bool, messageChannelSize int, backChannel *chan c.OsChanMsg, hDataEvent b.HANDLE) (mcs *MainControllerSettings, err error) {
 	mcs = &MainControllerSettings{
 		isDebug:            isDebug,
 		messageChannelSize: messageChannelSize,
+		backChannel:        backChannel,
+		hDataEvent:         hDataEvent,
 	}
 
 	err = mcs.Validate()
@@ -36,6 +44,14 @@ func (mcs *MainControllerSettings) Validate() (err error) {
 
 	if mcs.messageChannelSize <= 0 {
 		return errors.ErrorFromFormattedText(Errf_ErrorInField, Field_MessageChannelSize)
+	}
+
+	if mcs.backChannel == nil {
+		return errors.ErrorFromText(Err_NullPointer)
+	}
+
+	if mcs.hDataEvent == nil {
+		return errors.ErrorFromText(Err_NullPointer)
 	}
 
 	return nil

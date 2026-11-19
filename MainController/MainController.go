@@ -7,6 +7,8 @@ import (
 	stct "github.com/vault-thirteen/auxie/Start-Controller"
 	"github.com/vault-thirteen/auxie/cio"
 	"github.com/vault-thirteen/auxie/errors"
+	"github.com/vault-thirteen/auxie/os/win32"
+	b "github.com/vault-thirteen/auxie/os/win32/base"
 )
 
 const (
@@ -23,6 +25,8 @@ type MainController struct {
 	settings       *MainControllerSettings
 	sc             *stct.StartController
 	messageChannel *chan *MainControllerMessage
+	backChannel    *chan c.OsChanMsg
+	hDataEvent     b.HANDLE
 	workWg         *sync.WaitGroup
 	mbdp           *MouseButtonDownPos
 }
@@ -43,6 +47,8 @@ func NewMainController(settings *MainControllerSettings) (mc *MainController, er
 		settings:       settings,
 		sc:             stct.NewStartController(),
 		messageChannel: &ch,
+		backChannel:    settings.backChannel,
+		hDataEvent:     settings.hDataEvent,
 		workWg:         new(sync.WaitGroup),
 		mbdp:           NewMouseButtonDownPos(),
 	}
@@ -132,6 +138,12 @@ func (mc *MainController) processMouseEvent(msg *MainControllerMessage) {
 		if (pressPos != nil) && (pressPos.X == msg.MouseEvent.CursorX) && (pressPos.Y == msg.MouseEvent.CursorY) {
 			//TODO
 			cio.PrintMessage("Mouse Click, buttonType:", msg.MouseEvent.ButtonType)
+			*mc.backChannel <- c.OsChanMsg{Text: "I see your mouse click"}
+			_, err := win32.SetEvent(mc.hDataEvent)
+			if err != nil {
+				errors.LogError(err)
+				return
+			}
 		}
 		mc.mbdp.UnRegisterPressPosition(msg.MouseEvent.ButtonType)
 	}

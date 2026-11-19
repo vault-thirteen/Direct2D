@@ -23,10 +23,18 @@ import (
 )
 
 type App struct {
-	settings                   *as.AppSettings
-	instance                   b.HINSTANCE
-	printer                    *p.Printer[any]
-	mc                         *mc.MainController
+	settings *as.AppSettings
+	instance b.HINSTANCE
+	printer  *p.Printer[any]
+
+	// This channel is read in main thread and receives messages from MC.
+	osThreadChannel *chan c.OsChanMsg
+	hDataEvent      b.HANDLE
+
+	// Main Controller, or simply – MC, controls everything except
+	// communication with Windows O.S.
+	mc *mc.MainController
+
 	images                     []*img.Image
 	hwnd                       b.HWND
 	width                      b.UINT32
@@ -66,9 +74,17 @@ func NewApp(settings *as.AppSettings, instance b.HINSTANCE) (app *App, err error
 		return nil, err
 	}
 
+	// Message channel for main O.S. thread.
+	ch := make(chan c.OsChanMsg, 1)
+	app.osThreadChannel = &ch
+	app.hDataEvent, err = win32.CreateEventW(nil, b.FALSE, b.FALSE, nil) // Auto-reset event.
+	if err != nil {
+		return nil, err
+	}
+
 	// Main controller.
 	var mainControllerSettings *mc.MainControllerSettings
-	mainControllerSettings, err = mc.NewMainControllerSettings(app.settings.MainControllerMessageChannelSize, app.settings.Debug.IsEnabled)
+	mainControllerSettings, err = mc.NewMainControllerSettings(app.settings.Debug.IsEnabled, app.settings.MainControllerMessageChannelSize, app.osThreadChannel, app.hDataEvent)
 	if err != nil {
 		return nil, err
 	}
@@ -289,7 +305,7 @@ func (app *App) Run() (err error) {
 	// threads. We must read messages in the same O.S. thread where our window
 	// was created.
 	{
-		err = app.readOsMessages()
+		err = app.readMessagesFromOsAndMc()
 		if err != nil {
 			return err
 		}
@@ -320,6 +336,63 @@ func (app *App) readOsMessages() (err error) {
 
 		_ = win32.TranslateMessage(&msg)
 		_ = win32.DispatchMessageW(&msg)
+	}
+
+	return nil
+}
+func (app *App) readMessagesFromOsAndMc() (err error) {
+	app.printMessage(c.Msg_MessageReaderStart)
+	defer func() {
+		app.printMessage(c.Msg_MessageReaderStop)
+	}()
+
+	var msg t.MSG
+	var loop = true
+
+	for loop {
+		var dwResult b.DWORD
+		dwResult, err = win32.MsgWaitForMultipleObjectsEx(
+			1,                     // Number of descriptors in array.
+			&app.hDataEvent,       // Descriptors array.
+			b.INFINITE,            // Wait forever.
+			b.QS_ALLINPUT,         // Wake up on any O.S. message.
+			b.MWMO_INPUTAVAILABLE, // Do not sleep if unread messages are available.
+		)
+		if err != nil {
+			return err
+		}
+
+		switch dwResult {
+		case windows.WAIT_OBJECT_0:
+			{
+				// hDataEvent has happened. Read all queued messages.
+				//TODO
+				x := <-*app.osThreadChannel
+				app.printMessage(x.Text)
+			}
+
+		case windows.WAIT_OBJECT_0 + 1:
+			{
+				// We have new messages from O.S. Read them all.
+				var haveMessagesFromOs b.BOOL
+				for {
+					haveMessagesFromOs = win32.PeekMessageW(&msg, 0, 0, 0, b.PM_REMOVE)
+					if haveMessagesFromOs != b.TRUE {
+						break
+					}
+					if e.WM(msg.Message) == e.WM_QUIT {
+						loop = false
+						break
+					}
+
+					_ = win32.TranslateMessage(&msg)
+					_ = win32.DispatchMessageW(&msg)
+				}
+			}
+
+		default:
+			break
+		}
 	}
 
 	return nil
