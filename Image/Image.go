@@ -11,11 +11,11 @@ import (
 	"path/filepath"
 	"strings"
 
+	c "github.com/vault-thirteen/auxie/colour"
+	"github.com/vault-thirteen/auxie/errors"
 	e "github.com/vault-thirteen/auxie/os/win32/enum"
 	_ "golang.org/x/image/bmp"
 	_ "golang.org/x/image/tiff"
-
-	"github.com/vault-thirteen/auxie/errors"
 )
 
 const (
@@ -29,7 +29,7 @@ type Image struct {
 	Size             ImageSize
 	FormatName       string
 	ColourModel      color.Model
-	ColourModelType  ColourModelType
+	ColourModelType  c.ColourModelType
 	AlphaChannelMode e.D2D1_ALPHA_MODE
 	src              *image.Image
 }
@@ -72,7 +72,7 @@ func NewImageFromFile(filePath string, useStraightAlphaChannel bool) (i *Image, 
 		},
 		FormatName:       formatName,
 		ColourModel:      x.ColorModel(),
-		ColourModelType:  getColourModelType(x.ColorModel()),
+		ColourModelType:  c.GetColourModelType(x.ColorModel()),
 		AlphaChannelMode: e.D2D1_ALPHA_MODE_UNKNOWN,
 		src:              &x,
 	}
@@ -89,43 +89,43 @@ func NewImageFromFile(filePath string, useStraightAlphaChannel bool) (i *Image, 
 // PixelData returns raw pixel data in RGBA order if supported.
 func (i *Image) PixelData() ([]byte, []byte, []byte, []byte) {
 	switch i.ColourModelType {
-	case ColourModelType_RGBA:
+	case c.ColourModelType_RGBA:
 		return (*i.src).(*image.RGBA).Pix, nil, nil, nil
 
-	case ColourModelType_NRGBA:
+	case c.ColourModelType_NRGBA:
 		return (*i.src).(*image.NRGBA).Pix, nil, nil, nil
 
-	case ColourModelType_RGBA64:
+	case c.ColourModelType_RGBA64:
 		return (*i.src).(*image.RGBA64).Pix, nil, nil, nil
 
-	case ColourModelType_NRGBA64:
+	case c.ColourModelType_NRGBA64:
 		return (*i.src).(*image.NRGBA64).Pix, nil, nil, nil
 
-	case ColourModelType_Alpha:
+	case c.ColourModelType_Alpha:
 		return (*i.src).(*image.Alpha).Pix, nil, nil, nil
 
-	case ColourModelType_Alpha16:
+	case c.ColourModelType_Alpha16:
 		return (*i.src).(*image.Alpha16).Pix, nil, nil, nil
 
-	case ColourModelType_Gray:
+	case c.ColourModelType_Gray:
 		return (*i.src).(*image.Gray).Pix, nil, nil, nil
 
-	case ColourModelType_Gray16:
+	case c.ColourModelType_Gray16:
 		return (*i.src).(*image.Gray16).Pix, nil, nil, nil
 
-	case ColourModelType_YCbCr:
+	case c.ColourModelType_YCbCr:
 		{
 			x := (*i.src).(*image.YCbCr)
 			return x.Y, x.Cb, x.Cr, nil
 		}
 
-	case ColourModelType_NYCbCrA:
+	case c.ColourModelType_NYCbCrA:
 		{
 			x := (*i.src).(*image.NYCbCrA)
 			return x.Y, x.Cb, x.Cr, x.A
 		}
 
-	case ColourModelType_CMYK:
+	case c.ColourModelType_CMYK:
 		return (*i.src).(*image.CMYK).Pix, nil, nil, nil
 
 	default:
@@ -135,12 +135,11 @@ func (i *Image) PixelData() ([]byte, []byte, []byte, []byte) {
 
 // PixelDataAsBGRA returns raw pixel data in BGRA order if supported.
 func (i *Image) PixelDataAsBGRA() (pixelData []byte, err error) {
-
 	switch i.ColourModelType {
-	case ColourModelType_RGBA:
+	case c.ColourModelType_RGBA:
 		return ConvertPixelDataFromRgbaToBgra((*i.src).(*image.RGBA).Pix)
 
-	case ColourModelType_NRGBA:
+	case c.ColourModelType_NRGBA:
 		return ConvertPixelDataFromRgbaToBgra((*i.src).(*image.NRGBA).Pix)
 
 	default:
@@ -152,43 +151,43 @@ func (i *Image) PixelDataAsBGRA() (pixelData []byte, err error) {
 // supported.
 func (i *Image) PixelDataSize() int {
 	switch i.ColourModelType {
-	case ColourModelType_RGBA:
+	case c.ColourModelType_RGBA:
 		return len((*i.src).(*image.RGBA).Pix)
 
-	case ColourModelType_NRGBA:
+	case c.ColourModelType_NRGBA:
 		return len((*i.src).(*image.NRGBA).Pix)
 
-	case ColourModelType_RGBA64:
+	case c.ColourModelType_RGBA64:
 		return len((*i.src).(*image.RGBA64).Pix)
 
-	case ColourModelType_NRGBA64:
+	case c.ColourModelType_NRGBA64:
 		return len((*i.src).(*image.NRGBA64).Pix)
 
-	case ColourModelType_Alpha:
+	case c.ColourModelType_Alpha:
 		return len((*i.src).(*image.Alpha).Pix)
 
-	case ColourModelType_Alpha16:
+	case c.ColourModelType_Alpha16:
 		return len((*i.src).(*image.Alpha16).Pix)
 
-	case ColourModelType_Gray:
+	case c.ColourModelType_Gray:
 		return len((*i.src).(*image.Gray).Pix)
 
-	case ColourModelType_Gray16:
+	case c.ColourModelType_Gray16:
 		return len((*i.src).(*image.Gray16).Pix)
 
-	case ColourModelType_YCbCr:
+	case c.ColourModelType_YCbCr:
 		{
 			x := (*i.src).(*image.YCbCr)
 			return len(x.Y) + len(x.Cb) + len(x.Cr)
 		}
 
-	case ColourModelType_NYCbCrA:
+	case c.ColourModelType_NYCbCrA:
 		{
 			x := (*i.src).(*image.NYCbCrA)
 			return len(x.Y) + len(x.Cb) + len(x.Cr) + len(x.A)
 		}
 
-	case ColourModelType_CMYK:
+	case c.ColourModelType_CMYK:
 		return len((*i.src).(*image.CMYK).Pix)
 
 	default:
@@ -200,43 +199,43 @@ func (i *Image) PixelDataSize() int {
 // pixels if supported.
 func (i *Image) LineStride() (int, int, int) {
 	switch i.ColourModelType {
-	case ColourModelType_RGBA:
+	case c.ColourModelType_RGBA:
 		return (*i.src).(*image.RGBA).Stride, 0, 0
 
-	case ColourModelType_NRGBA:
+	case c.ColourModelType_NRGBA:
 		return (*i.src).(*image.NRGBA).Stride, 0, 0
 
-	case ColourModelType_RGBA64:
+	case c.ColourModelType_RGBA64:
 		return (*i.src).(*image.RGBA64).Stride, 0, 0
 
-	case ColourModelType_NRGBA64:
+	case c.ColourModelType_NRGBA64:
 		return (*i.src).(*image.NRGBA64).Stride, 0, 0
 
-	case ColourModelType_Alpha:
+	case c.ColourModelType_Alpha:
 		return (*i.src).(*image.Alpha).Stride, 0, 0
 
-	case ColourModelType_Alpha16:
+	case c.ColourModelType_Alpha16:
 		return (*i.src).(*image.Alpha16).Stride, 0, 0
 
-	case ColourModelType_Gray:
+	case c.ColourModelType_Gray:
 		return (*i.src).(*image.Gray).Stride, 0, 0
 
-	case ColourModelType_Gray16:
+	case c.ColourModelType_Gray16:
 		return (*i.src).(*image.Gray16).Stride, 0, 0
 
-	case ColourModelType_YCbCr:
+	case c.ColourModelType_YCbCr:
 		{
 			x := (*i.src).(*image.YCbCr)
 			return x.YStride, x.CStride, 0
 		}
 
-	case ColourModelType_NYCbCrA:
+	case c.ColourModelType_NYCbCrA:
 		{
 			x := (*i.src).(*image.NYCbCrA)
 			return x.YStride, x.CStride, x.AStride
 		}
 
-	case ColourModelType_CMYK:
+	case c.ColourModelType_CMYK:
 		return (*i.src).(*image.CMYK).Stride, 0, 0
 
 	default:
@@ -247,37 +246,37 @@ func (i *Image) LineStride() (int, int, int) {
 // Rect returns image's bounds.
 func (i *Image) Rect() image.Rectangle {
 	switch i.ColourModelType {
-	case ColourModelType_RGBA:
+	case c.ColourModelType_RGBA:
 		return (*i.src).(*image.RGBA).Rect
 
-	case ColourModelType_NRGBA:
+	case c.ColourModelType_NRGBA:
 		return (*i.src).(*image.NRGBA).Rect
 
-	case ColourModelType_RGBA64:
+	case c.ColourModelType_RGBA64:
 		return (*i.src).(*image.RGBA64).Rect
 
-	case ColourModelType_NRGBA64:
+	case c.ColourModelType_NRGBA64:
 		return (*i.src).(*image.NRGBA64).Rect
 
-	case ColourModelType_Alpha:
+	case c.ColourModelType_Alpha:
 		return (*i.src).(*image.Alpha).Rect
 
-	case ColourModelType_Alpha16:
+	case c.ColourModelType_Alpha16:
 		return (*i.src).(*image.Alpha16).Rect
 
-	case ColourModelType_Gray:
+	case c.ColourModelType_Gray:
 		return (*i.src).(*image.Gray).Rect
 
-	case ColourModelType_Gray16:
+	case c.ColourModelType_Gray16:
 		return (*i.src).(*image.Gray16).Rect
 
-	case ColourModelType_YCbCr:
+	case c.ColourModelType_YCbCr:
 		return (*i.src).(*image.YCbCr).Rect
 
-	case ColourModelType_NYCbCrA:
+	case c.ColourModelType_NYCbCrA:
 		return (*i.src).(*image.NYCbCrA).Rect
 
-	case ColourModelType_CMYK:
+	case c.ColourModelType_CMYK:
 		return (*i.src).(*image.CMYK).Rect
 
 	default:
@@ -313,32 +312,4 @@ func convertImageToNRgba(src image.Image) (dst *image.NRGBA) {
 }
 func fileNameWithoutExtension(fileName string) (fnwo string) {
 	return strings.TrimSuffix(fileName, filepath.Ext(fileName))
-}
-func getColourModelType(cm color.Model) (cmt ColourModelType) {
-	switch cm {
-	case color.RGBAModel:
-		return ColourModelType_RGBA
-	case color.RGBA64Model:
-		return ColourModelType_RGBA64
-	case color.NRGBAModel:
-		return ColourModelType_NRGBA
-	case color.NRGBA64Model:
-		return ColourModelType_NRGBA64
-	case color.AlphaModel:
-		return ColourModelType_Alpha
-	case color.Alpha16Model:
-		return ColourModelType_Alpha16
-	case color.GrayModel:
-		return ColourModelType_Gray
-	case color.Gray16Model:
-		return ColourModelType_Gray16
-	case color.YCbCrModel:
-		return ColourModelType_YCbCr
-	case color.NYCbCrAModel:
-		return ColourModelType_NYCbCrA
-	case color.CMYKModel:
-		return ColourModelType_CMYK
-	default:
-		return ColourModelType_Unknown
-	}
 }

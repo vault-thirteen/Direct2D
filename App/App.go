@@ -12,6 +12,7 @@ import (
 	p "github.com/vault-thirteen/Direct2D/Printer"
 	c "github.com/vault-thirteen/Direct2D/common"
 	"github.com/vault-thirteen/auxie/cio"
+	ac "github.com/vault-thirteen/auxie/colour"
 	"github.com/vault-thirteen/auxie/errors"
 	"github.com/vault-thirteen/auxie/os/win32"
 	b "github.com/vault-thirteen/auxie/os/win32/base"
@@ -35,6 +36,7 @@ type App struct {
 	// communication with Windows O.S.
 	mc *mc.MainController
 
+	frameBufferImage           *img.Image //TODO
 	images                     []*img.Image
 	hwnd                       b.HWND
 	width                      b.UINT32
@@ -1201,7 +1203,7 @@ func (app *App) loadBitmap() (err error) {
 	// Of all the colour models which are supported in Go language, only RGBA
 	// model has chances to be used. Unfortunately, Google corporation does not
 	// support alternative technologies and standards.
-	if image.ColourModelType != img.ColourModelType_RGBA {
+	if image.ColourModelType != ac.ColourModelType_RGBA {
 		return errors.ErrorFromText(c.Err_UnsupportedPixelFormat)
 	}
 

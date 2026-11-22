@@ -1,6 +1,7 @@
 package img
 
 import (
+	c "github.com/vault-thirteen/auxie/colour"
 	e "github.com/vault-thirteen/auxie/os/win32/enum"
 	"github.com/vault-thirteen/auxie/tester"
 
@@ -16,7 +17,7 @@ func Test_NewImageFromFile(t *testing.T) {
 	aTest.MustBeEqual(image.Name, "Row_of_Town_Houses")
 	aTest.MustBeEqual(image.Size, ImageSize{Width: 900, Height: 506})
 	aTest.MustBeEqual(image.FormatName, "jpeg")
-	aTest.MustBeEqual(image.ColourModelType, ColourModelType_NRGBA)
+	aTest.MustBeEqual(image.ColourModelType, c.ColourModelType_NRGBA)
 	aTest.MustBeEqual(image.AlphaChannelMode, e.D2D1_ALPHA_MODE_STRAIGHT)
 	aTest.MustBeEqual(image.PixelDataSize(), 900*506*4)
 
