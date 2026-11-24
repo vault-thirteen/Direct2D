@@ -7,10 +7,10 @@ github.com/pkg/diff v0.0.0-20210226163009-20ebb0f2a09e/go.mod h1:pJLUxLENpZxwdsK
 github.com/rogpeppe/go-internal v1.9.0/go.mod h1:WtVeX8xhTBvf0smdhujwtBcq4Qrzq/fJaraNFVN+nFs=
 github.com/rogpeppe/go-internal v1.16.0 h1:O9DK+vNMDVGLr2BeZqmpLeMjiMNkuXfcqntWbZV6S5g=
 github.com/rogpeppe/go-internal v1.16.0/go.mod h1:DrUVZyrJU+txYW5/1kwtXQSMFio52ZOxX7yM1VHvnxs=
-github.com/vault-thirteen/auxie v0.49.1 h1:6U4WCnZ3Ady785o3HFanzkHVzu1UYFGNFNRcdHQ/IOw=
-github.com/vault-thirteen/auxie v0.49.1/go.mod h1:eZBARyCukl5KdL3JneSTviysVIhhBELy2oniK9ljpqw=
-golang.org/x/exp v0.0.0-20261121134650-e1094eeca1b5 h1:dy60w5SqNxJYBAYs1Fg7h4IIYR23bGbwIjTycad1Fe8=
-golang.org/x/exp v0.0.0-20261121134650-e1094eeca1b5/go.mod h1:xeYMf2GfgE/gQmBtvdPsBN608YETsXuvoiEhaOxGg/w=
+github.com/vault-thirteen/auxie v0.49.2 h1:SsGEoYjeWJlTmUUG7zui/qdemT7R/51g+YP0hqL9Isk=
+github.com/vault-thirteen/auxie v0.49.2/go.mod h1:eZBARyCukl5KdL3JneSTviysVIhhBELy2oniK9ljpqw=
+golang.org/x/exp v0.0.0-20261124000051-d6646c509b6d h1:GxW3ezPxBJFxB7GVPlqeQ6mi67zWQC5dFSzidYXJrV8=
+golang.org/x/exp v0.0.0-20261124000051-d6646c509b6d/go.mod h1:xeYMf2GfgE/gQmBtvdPsBN608YETsXuvoiEhaOxGg/w=
 golang.org/x/image v0.48.0 h1:1AvuPcuoOTJpA7s4VZ5umrb90T3So0rkB/bSGmxkxik=
 golang.org/x/image v0.48.0/go.mod h1:mmtg64iqJKGqEgy+r13dfybl85tmxUd2lMnmaiSdWYY=
 golang.org/x/sys v0.50.0 h1:dkKZEFTEKaLr1sjhs0WiKqoi8Jj5nHbS3Njmx1UoMJs=
